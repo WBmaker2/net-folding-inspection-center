@@ -15,6 +15,8 @@ import type {
 import type { CubeValidationResult } from '../domain/net/validateCubeNet';
 import type { FaceId, FoldSequence } from '../domain/net/types';
 import { useFocusHeading } from '../hooks/useFocusHeading';
+import { PrimaryAction } from '../components/common/PrimaryAction';
+import type { CriticalActionId } from '../domain/learning/types';
 import '../styles/evidence.css';
 
 export interface EvidenceScreenProps {
@@ -29,6 +31,7 @@ export interface EvidenceScreenProps {
   readonly onComplete?: () => void;
   readonly onCompletion?: () => void;
   readonly onCompleteMission?: () => void;
+  readonly criticalActionId?: CriticalActionId;
 }
 
 const terms: readonly GeometryTerm[] = ['맞은편', '모서리', '면', '접는 방향', '겹침', '빈 면'];
@@ -43,6 +46,7 @@ export function EvidenceScreen({
   onComplete,
   onCompletion,
   onCompleteMission,
+  criticalActionId = 'submit-evidence',
 }: EvidenceScreenProps): React.JSX.Element {
   const headingRef = useFocusHeading<HTMLHeadingElement>();
   const [selectedFaces, setSelectedFaces] = useState<FaceId[]>([]);
@@ -200,23 +204,27 @@ export function EvidenceScreen({
       {submitted !== null && (
         <p className="field-success" role="status">근거 시도를 기록했습니다. 필요한 경우 선택을 고쳐 다시 확인할 수 있습니다.</p>
       )}
-      <button
-        type="button"
-        className={submitted === null ? 'evidence-submit gi-pulse' : 'evidence-submit'}
+      <PrimaryAction
+        actionId="submit-evidence"
+        criticalActionId={criticalActionId}
+        isPrimary={submitted === null || !isCorrectDraft}
+        className="evidence-submit"
         disabled={draft === null || preview === null}
         onClick={submit}
       >
         근거 확인
-      </button>
+      </PrimaryAction>
       {submitted !== null && isCorrectDraft && (
-        <button
-          type="button"
-          className={completed ? 'evidence-complete' : 'evidence-complete gi-pulse'}
+        <PrimaryAction
+          actionId="submit-evidence"
+          criticalActionId={criticalActionId}
+          isPrimary
+          className="evidence-complete"
           disabled={completed}
           onClick={complete}
         >
           미션 완료 확인
-        </button>
+        </PrimaryAction>
       )}
       {completed && <p className="field-success" role="status">미션 완료를 기록했습니다.</p>}
       {completeError && <p className="field-error" role="alert">{completeError}</p>}

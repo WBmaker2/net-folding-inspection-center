@@ -50,7 +50,7 @@
 }
 
 .evidence-fieldset select {
-  min-height: 2.6rem;
+  min-height: 44px;
   padding: 0.45rem;
   border: 1px solid var(--line);
   border-radius: 0.55rem;

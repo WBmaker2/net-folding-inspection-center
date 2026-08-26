@@ -1,10 +1,13 @@
 import type { ReactNode } from 'react';
+import { useState } from 'react';
+import { UpdateHistoryDialog } from '../components/common/UpdateHistoryDialog';
 
 interface AppShellProps {
   readonly children: ReactNode;
 }
 
 export function AppShell({ children }: AppShellProps): React.JSX.Element {
+  const [historyOpen, setHistoryOpen] = useState(false);
   return (
     <>
       <header className="site-header">
@@ -21,19 +24,17 @@ export function AppShell({ children }: AppShellProps): React.JSX.Element {
       <footer className="site-footer">
         <div className="shell-width footer-content">
           <p>천천히 접고, 모서리와 면의 관계를 살펴보세요.</p>
-          <details className="update-history">
-            <summary>업데이트 내역</summary>
-            <div className="update-history-panel">
-              <p>
-                <time dateTime="2026-08-26">2026-08-26</time> · 설계 · 최초 설계 문서 작성
-              </p>
-              <p>
-                <time dateTime="2026-08-26">2026-08-26</time> · 개발 · 검수소 셸과 실행 기반 추가
-              </p>
-            </div>
-          </details>
         </div>
       </footer>
+      <button
+        type="button"
+        className="update-history-trigger"
+        aria-haspopup="dialog"
+        onClick={() => setHistoryOpen(true)}
+      >
+        업데이트 내역
+      </button>
+      <UpdateHistoryDialog open={historyOpen} onClose={() => setHistoryOpen(false)} />
     </>
   );
 }

@@ -1,14 +1,16 @@
 import { useMemo, useState } from 'react';
 import { NetGrid } from '../components/net2d/NetGrid';
+import { PrimaryAction } from '../components/common/PrimaryAction';
 import { faceNumber } from '../components/net2d/faceLabels';
 import { useFocusHeading } from '../hooks/useFocusHeading';
 import '../styles/net2d.css';
-import type { MissionDefinition } from '../domain/learning/types';
+import type { CriticalActionId, MissionDefinition } from '../domain/learning/types';
 import type { FaceId, FoldDirection, PredictionRecord } from '../domain/net/types';
 
 export interface PredictionScreenProps {
   readonly mission: MissionDefinition;
   readonly onSubmit: (prediction: PredictionRecord) => void;
+  readonly criticalActionId?: CriticalActionId;
   readonly now?: () => string;
 }
 
@@ -25,7 +27,7 @@ const faceIdsExcept = (mission: MissionDefinition, baseFaceId: FaceId | null): r
     .filter((faceId) => faceId !== (baseFaceId ?? mission.baseFaceId))
 );
 
-export function PredictionScreen({ mission, onSubmit, now = () => new Date().toISOString() }: PredictionScreenProps): React.JSX.Element {
+export function PredictionScreen({ mission, onSubmit, criticalActionId = 'submit-prediction', now = () => new Date().toISOString() }: PredictionScreenProps): React.JSX.Element {
   const headingRef = useFocusHeading<HTMLHeadingElement>();
   const [baseFaceId, setBaseFaceId] = useState<FaceId | null>(null);
   const [predictedTopFaceId, setPredictedTopFaceId] = useState<FaceId | null>(null);
@@ -216,14 +218,15 @@ export function PredictionScreen({ mission, onSubmit, now = () => new Date().toI
       <p className="field-success" role="status" hidden={!submitted}>
         예측을 기록했습니다. 이제 접기실에서 한 면씩 확인해 보세요.
       </p>
-      <button
-        type="button"
+      <PrimaryAction
+        actionId="submit-prediction"
+        criticalActionId={criticalActionId}
         className="prediction-submit"
         disabled={!isComplete}
         onClick={submit}
       >
         예측을 남기고 접기실로
-      </button>
+      </PrimaryAction>
     </section>
   );
 }

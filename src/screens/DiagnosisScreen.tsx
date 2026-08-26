@@ -5,7 +5,7 @@ import {
   evaluateDiagnosis,
   isValidationShape,
 } from '../domain/learning/diagnosis';
-import type { DiagnosisSubmission, MissionDefinition } from '../domain/learning/types';
+import type { CriticalActionId, DiagnosisSubmission, MissionDefinition } from '../domain/learning/types';
 import type {
   AxisDirection,
   DecorationOrientationResult,
@@ -14,6 +14,7 @@ import type {
 } from '../domain/net/types';
 import type { CubeValidationResult } from '../domain/net/validateCubeNet';
 import { useFocusHeading } from '../hooks/useFocusHeading';
+import { PrimaryAction } from '../components/common/PrimaryAction';
 import '../styles/net2d.css';
 
 export interface DiagnosisScreenProps {
@@ -24,6 +25,7 @@ export interface DiagnosisScreenProps {
   readonly foldSequence?: FoldSequence;
   readonly onSubmit: (diagnosis: DiagnosisSubmission) => void;
   readonly onReturnToFoldStep?: (stepIndex: number) => void;
+  readonly criticalActionId?: CriticalActionId;
 }
 
 const AXES: readonly { readonly value: AxisDirection; readonly label: string }[] = [
@@ -74,6 +76,7 @@ export function DiagnosisScreen({
   baseFaceId = mission.baseFaceId,
   onSubmit,
   onReturnToFoldStep,
+  criticalActionId = 'submit-diagnosis',
 }: DiagnosisScreenProps): React.JSX.Element {
   const headingRef = useFocusHeading<HTMLHeadingElement>();
   const [selectedErrorType, setSelectedErrorType] = useState<DiagnosisSubmission['selectedErrorType'] | null>(null);
@@ -332,14 +335,15 @@ export function DiagnosisScreen({
           접기 단계 되돌아보기
         </button>
       )}
-      <button
-        type="button"
+      <PrimaryAction
+        actionId="submit-diagnosis"
+        criticalActionId={criticalActionId}
         className="diagnosis-submit"
         disabled={!isComplete}
         onClick={submit}
       >
         진단 확인
-      </button>
+      </PrimaryAction>
     </section>
   );
 }

@@ -6,6 +6,8 @@ import { evaluateRepair, enumerateRepairTargets, moveFace, rotateFaceDecoration,
 import type { RepairSubmission, MissionDefinition } from '../domain/learning/types';
 import type { FaceId, GridPoint, NetDefinition } from '../domain/net/types';
 import { useFocusHeading } from '../hooks/useFocusHeading';
+import { PrimaryAction } from '../components/common/PrimaryAction';
+import type { CriticalActionId } from '../domain/learning/types';
 import '../styles/net2d.css';
 import '../styles/repair.css';
 
@@ -19,6 +21,7 @@ export interface RepairScreenProps {
   /** Standalone Task 11 keeps this capability; integrated flow can hide it. */
   readonly showDecorationRotation?: boolean;
   readonly now?: () => string;
+  readonly criticalActionId?: CriticalActionId;
 }
 
 const pointText = (point: GridPoint): string => `(${point.x}, ${point.y})`;
@@ -46,6 +49,7 @@ function RepairScreenContent({
   onRotateDecoration,
   showDecorationRotation = true,
   now = () => new Date().toISOString(),
+  criticalActionId = 'confirm-repair',
 }: RepairScreenContentProps): React.JSX.Element {
   const headingRef = useFocusHeading<HTMLHeadingElement>();
   const [decorationPreviewNet, setDecorationPreviewNet] = useState<NetDefinition>(repairNet);
@@ -192,9 +196,14 @@ function RepairScreenContent({
             {reasonText(evaluation)}
           </p>
           {callbackError && <p className="field-error" role="alert">수리 기록을 저장하지 못했습니다.</p>}
-          <button type="button" className="repair-confirm-button" onClick={confirm}>
+          <PrimaryAction
+            actionId="confirm-repair"
+            criticalActionId={criticalActionId}
+            className="repair-confirm-button"
+            onClick={confirm}
+          >
             수리 확인
-          </button>
+          </PrimaryAction>
         </div>
       )}
     </section>

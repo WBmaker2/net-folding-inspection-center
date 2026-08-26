@@ -14,6 +14,8 @@ import type {
 } from '../domain/learning/types';
 import { validateCubeNet } from '../domain/net/validateCubeNet';
 import { useFocusHeading } from '../hooks/useFocusHeading';
+import { PrimaryAction } from '../components/common/PrimaryAction';
+import type { CriticalActionId } from '../domain/learning/types';
 import '../styles/evidence.css';
 
 export interface CompletionScreenProps {
@@ -25,6 +27,7 @@ export interface CompletionScreenProps {
   readonly onNextMission?: () => void;
   readonly onReview?: () => void;
   readonly onNext?: () => void;
+  readonly criticalActionId?: CriticalActionId;
 }
 
 const statusText = (value: AchievementEvidence[keyof AchievementEvidence]): string => (
@@ -53,6 +56,7 @@ export function CompletionScreen({
   onNextMission,
   onReview,
   onNext,
+  criticalActionId = 'next-mission',
 }: CompletionScreenProps): React.JSX.Element {
   const headingRef = useFocusHeading<HTMLHeadingElement>();
   const [callbackError, setCallbackError] = useState('');
@@ -159,9 +163,13 @@ export function CompletionScreen({
       <div className="completion-actions">
         {onReview !== undefined && <button type="button" onClick={() => runCallback(onReview)}>접기 결과 다시 보기</button>}
         {(onNextMission ?? onNext) !== undefined && (
-          <button type="button" className="gi-pulse" onClick={() => runCallback(onNextMission ?? onNext)}>
+          <PrimaryAction
+            actionId="next-mission"
+            criticalActionId={criticalActionId}
+            onClick={() => runCallback(onNextMission ?? onNext)}
+          >
             다음 미션
-          </button>
+          </PrimaryAction>
         )}
       </div>
       {callbackError && <p className="field-error" role="alert">{callbackError}</p>}

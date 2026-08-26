@@ -24,6 +24,7 @@ const choosePrediction = async (user: ReturnType<typeof userEvent.setup>, topFac
   for (const face of order) {
     await user.click(screen.getByRole('button', { name: `${face}번 면의 북쪽 방향 ↑` }));
   }
+  expectOnePulse('예측을 남기고 접기실로');
   await user.click(screen.getByRole('button', { name: '예측을 남기고 접기실로' }));
 };
 
@@ -50,6 +51,11 @@ const expectPredictionLocked = (container: HTMLElement): void => {
   expect(screen.queryByRole('region', { name: '접기 3D 보조 보기' })).not.toBeInTheDocument();
 };
 
+const expectOnePulse = (buttonName: string | RegExp): void => {
+  expect(document.querySelectorAll('.gi-pulse')).toHaveLength(1);
+  expect(screen.getByRole('button', { name: buttonName })).toHaveClass('gi-pulse');
+};
+
 describe('Task 13 integrated learner flow', () => {
   afterEach(cleanup);
   it('starts at an eight-mission intake grouped by kind without result or packaging controls', () => {
@@ -59,6 +65,7 @@ describe('Task 13 integrated learner flow', () => {
     expect(screen.getByRole('heading', { name: '검수 접수' })).toBeVisible();
     expectPredictionLocked(container);
     expect(screen.getAllByRole('button', { name: /미션 선택$/ })).toHaveLength(8);
+    expectOnePulse(/면 위치 추적 1 미션 선택/);
     expect(screen.getAllByRole('heading', { level: 2 })).toHaveLength(4);
     expect(screen.queryByText(/점수|순위|타이머|치수|꾸미|공유/u)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /정답|결과|공유|꾸미|치수/u })).not.toBeInTheDocument();
@@ -73,6 +80,7 @@ describe('Task 13 integrated learner flow', () => {
     expectPredictionLocked(container);
     expect(screen.queryByText(/검사 결과|겹치|진단|수리|근거/u)).not.toBeInTheDocument();
     await choosePrediction(user, 3);
+    expectOnePulse('다음 면 접기');
     for (let step = 0; step < 4; step += 1) {
       await user.click(screen.getByRole('button', { name: '다음 면 접기' }));
     }
@@ -85,14 +93,18 @@ describe('Task 13 integrated learner flow', () => {
     expect(screen.getByRole('heading', { name: '접힌 결과 진단하기' })).toBeVisible();
     await user.click(screen.getByLabelText('장식 방향을 확인해야 해요'));
     await user.click(screen.getByRole('button', { name: /^3번 면/ }));
+    expectOnePulse('진단 확인');
     await user.click(screen.getByRole('button', { name: '진단 확인' }));
     expect(screen.getByRole('heading', { name: '근거 문장 만들기' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: /^1번 면/ }));
     await user.click(screen.getByRole('button', { name: /^3번 면/ }));
     await chooseTerms(user, '맞은편', '접는 방향');
+    expectOnePulse('근거 확인');
     await user.click(screen.getByRole('button', { name: '근거 확인' }));
+    expectOnePulse('미션 완료 확인');
     await user.click(screen.getByRole('button', { name: '미션 완료 확인' }));
     expect(screen.getByRole('heading', { name: '검수 완료' })).toBeVisible();
+    expectOnePulse('다음 미션');
   });
 
   it('completes the opposite path without exposing diagnosis', async () => {
@@ -129,11 +141,14 @@ describe('Task 13 integrated learner flow', () => {
     expect(screen.queryByRole('button', { name: /장식만 한 번 돌리기/u })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^6번 면/ }));
     await user.click(screen.getByRole('button', { name: /빈 칸 \(2, 1\)/ }));
+    expectOnePulse('수리 확인');
     await user.click(screen.getByRole('button', { name: '수리 확인' }));
     await user.click(screen.getByRole('button', { name: /^2번 면/ }));
     await user.click(screen.getByRole('button', { name: /^6번 면/ }));
     await chooseTerms(user, '겹침', '면');
+    expectOnePulse('근거 확인');
     await user.click(screen.getByRole('button', { name: '근거 확인' }));
+    expectOnePulse('미션 완료 확인');
     await user.click(screen.getByRole('button', { name: '미션 완료 확인' }));
     expect(screen.getByRole('heading', { name: '검수 완료' })).toBeVisible();
   });

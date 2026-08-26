@@ -7,6 +7,10 @@ const layoutStyles = readFileSync(
   'src/styles/layout.css',
   'utf8',
 );
+const componentStyles = readFileSync(
+  'src/styles/components.css',
+  'utf8',
+);
 
 describe('AppShell', () => {
   it('shows the Korean inspection center introduction', () => {
@@ -18,11 +22,9 @@ describe('AppShell', () => {
   });
 
   it('keeps update history at the bottom-right on narrow screens', () => {
-    expect(layoutStyles).toMatch(
-      /\.update-history\s*\{\s*align-self:\s*flex-end;\s*\}/,
-    );
     expect(layoutStyles).toContain(
       'padding-bottom: max(0.75rem, env(safe-area-inset-bottom));',
     );
+    expect(componentStyles).toMatch(/\.update-history-trigger\s*\{[\s\S]*position:\s*fixed;[\s\S]*right:\s*calc\(env\(safe-area-inset-right\) \+ 16px\);[\s\S]*bottom:\s*calc\(env\(safe-area-inset-bottom\) \+ 16px\);/);
   });
 });

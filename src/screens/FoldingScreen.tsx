@@ -8,6 +8,8 @@ import { FaceRelationTable } from '../components/net2d/FaceRelationTable';
 import { describeFoldSnapshot } from '../components/net2d/FoldStateDescription';
 import { CubeFoldViewer } from '../components/net3d/CubeFoldViewer';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
+import { PrimaryAction } from '../components/common/PrimaryAction';
+import type { CriticalActionId } from '../domain/learning/types';
 import '../styles/net2d.css';
 
 export interface FoldingScreenProps {
@@ -19,6 +21,7 @@ export interface FoldingScreenProps {
   readonly onStepChange?: (stepIndex: number) => void;
   readonly onComplete?: () => void;
   readonly onContinue?: () => void;
+  readonly criticalActionId?: CriticalActionId;
 }
 
 const clampStep = (value: number): number => Math.max(0, Math.min(5, Math.trunc(value)));
@@ -35,6 +38,7 @@ export function FoldingScreen({
   onStepChange,
   onComplete,
   onContinue,
+  criticalActionId = 'next-fold',
 }: FoldingScreenProps): React.JSX.Element {
   const reducedMotion = usePrefersReducedMotion();
   const [stepIndex, setStepIndex] = useState(() => clampStep(initialStepIndex));
@@ -122,9 +126,14 @@ export function FoldingScreen({
           onChange={(event) => setFoldStep(Number(event.target.value))}
           aria-describedby="folding-model-boundary"
         />
-        <button type="button" onClick={() => setFoldStep(stepIndex + 1)} disabled={stepIndex === 5}>
+        <PrimaryAction
+          actionId="next-fold"
+          criticalActionId={criticalActionId}
+          onClick={() => setFoldStep(stepIndex + 1)}
+          disabled={stepIndex === 5}
+        >
           다음 면 접기
-        </button>
+        </PrimaryAction>
       </div>
 
       <div className="folding-options" aria-label="관계 보기 옵션">
@@ -138,27 +147,29 @@ export function FoldingScreen({
         </label>
       </div>
 
-      <CubeFoldViewer
-        snapshot={snapshot}
-        net={mission.net}
-        view="front"
-        reducedMotion={reducedMotion}
-        singleFaceMode={singleFaceMode}
-        baseFaceId={prediction.baseFaceId}
-        movingFaceId={movingFaceId}
-        hingeFaceId={hingeFaceId}
-      />
+      <div className="learning-board">
+        <CubeFoldViewer
+          snapshot={snapshot}
+          net={mission.net}
+          view="front"
+          reducedMotion={reducedMotion}
+          singleFaceMode={singleFaceMode}
+          baseFaceId={prediction.baseFaceId}
+          movingFaceId={movingFaceId}
+          hingeFaceId={hingeFaceId}
+        />
 
-      <FaceRelationTable
-        frames={snapshot.frames}
-        finalFrames={sequence.frames}
-        settledFaceIds={snapshot.settledFaceIds}
-        baseFaceId={prediction.baseFaceId}
-        singleFaceMode={singleFaceMode}
-        movingFaceId={movingFaceId}
-        hingeFaceId={hingeFaceId}
-        basePinned
-      />
+        <FaceRelationTable
+          frames={snapshot.frames}
+          finalFrames={sequence.frames}
+          settledFaceIds={snapshot.settledFaceIds}
+          baseFaceId={prediction.baseFaceId}
+          singleFaceMode={singleFaceMode}
+          movingFaceId={movingFaceId}
+          hingeFaceId={hingeFaceId}
+          basePinned
+        />
+      </div>
     </section>
   );
 }

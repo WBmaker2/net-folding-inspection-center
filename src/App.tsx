@@ -10,11 +10,13 @@ import { FoldingScreen } from './screens/FoldingScreen';
 import { IntakeScreen } from './screens/IntakeScreen';
 import { PredictionScreen } from './screens/PredictionScreen';
 import { RepairScreen } from './screens/RepairScreen';
+import { getCriticalActionId } from './domain/learning/selectors';
 import type { FaceId } from './domain/net/types';
 
 export function App(): React.JSX.Element {
   const controller = useLearningController();
   const { state, mission, validation, foldSequence } = controller;
+  const criticalActionId = getCriticalActionId(state);
   const missions = useMemo(() => loadMissionCatalog(), []);
   const decoration = useMemo(() => {
     if (mission?.kind !== 'tracking' || validation === null) return undefined;
@@ -40,6 +42,7 @@ export function App(): React.JSX.Element {
         <IntakeScreen
           missions={missions}
           completedMissionIds={state.completedMissionIds}
+          criticalActionId={criticalActionId}
           onSelectMission={controller.selectMission}
         />
       );
@@ -49,6 +52,7 @@ export function App(): React.JSX.Element {
       return (
         <PredictionScreen
           mission={mission}
+          criticalActionId={criticalActionId}
           onSubmit={(prediction) => controller.dispatch({
             type: 'SUBMIT_PREDICTION',
             prediction,
@@ -64,6 +68,7 @@ export function App(): React.JSX.Element {
           prediction={state.prediction}
           validation={validation ?? undefined}
           initialStepIndex={state.foldStepIndex}
+          criticalActionId={criticalActionId}
           onStepChange={(stepIndex) => controller.dispatch({
             type: 'SET_FOLD_STEP',
             stepIndex,
@@ -80,6 +85,7 @@ export function App(): React.JSX.Element {
           validation={validation}
           decoration={decoration}
           foldSequence={foldSequence ?? undefined}
+          criticalActionId={criticalActionId}
           onSubmit={(diagnosis) => controller.dispatch({
             type: 'SUBMIT_DIAGNOSIS',
             diagnosis,
@@ -99,6 +105,7 @@ export function App(): React.JSX.Element {
           mission={mission}
           baseFaceId={state.prediction.baseFaceId}
           showDecorationRotation={false}
+          criticalActionId={criticalActionId}
           onSubmit={(repair) => controller.dispatch({
             type: 'SUBMIT_REPAIR',
             repair,
@@ -116,6 +123,7 @@ export function App(): React.JSX.Element {
           diagnosis={state.diagnosis}
           repair={state.repair}
           foldSequence={foldSequence ?? undefined}
+          criticalActionId={criticalActionId}
           onSubmit={(evidence) => controller.dispatch({
             type: 'SUBMIT_EVIDENCE',
             evidence,
@@ -133,6 +141,7 @@ export function App(): React.JSX.Element {
         <CompletionScreen
           mission={mission}
           state={state}
+          criticalActionId={criticalActionId}
           onReview={reviewFold}
           onNextMission={controller.resetMission}
         />

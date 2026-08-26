@@ -1,9 +1,12 @@
 import type { MissionDefinition, MissionId } from '../domain/learning/types';
+import type { CriticalActionId } from '../domain/learning/types';
+import { PrimaryAction } from '../components/common/PrimaryAction';
 import '../styles/layout.css';
 
 export interface IntakeScreenProps {
   readonly missions: readonly MissionDefinition[];
   readonly completedMissionIds?: readonly MissionId[];
+  readonly criticalActionId?: CriticalActionId;
   readonly onSelectMission: (missionId: MissionId) => void;
 }
 
@@ -25,6 +28,7 @@ const difficultyFor = (mission: MissionDefinition, missions: readonly MissionDef
 export function IntakeScreen({
   missions,
   completedMissionIds = [],
+  criticalActionId = 'select-mission',
   onSelectMission,
 }: IntakeScreenProps): React.JSX.Element {
   const completed = new Set(completedMissionIds);
@@ -58,13 +62,15 @@ export function IntakeScreen({
                           {isCompleted ? '완료한 미션' : '아직 시작하지 않음'}
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        className={`mission-select-button${mission.id === criticalMissionId ? ' gi-pulse' : ''}`}
+                      <PrimaryAction
+                        actionId="select-mission"
+                        criticalActionId={criticalActionId}
+                        isPrimary={mission.id === criticalMissionId}
+                        className="mission-select-button"
                         onClick={() => onSelectMission(mission.id)}
                       >
                         {mission.title} 미션 선택
-                      </button>
+                      </PrimaryAction>
                     </article>
                   );
                 })}

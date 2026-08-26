@@ -16,11 +16,20 @@ body {
     radial-gradient(circle at 10% 0%, rgb(224 244 247 / 60%), transparent 35rem),
     var(--paper);
   line-height: 1.6;
+  overflow-x: clip;
 }
 
 button,
-summary {
+summary,
+input,
+select {
   font: inherit;
+}
+
+button,
+input,
+select {
+  min-height: 44px;
 }
 
 button:focus-visible,

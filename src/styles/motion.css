@@ -1,0 +1,51 @@
+@keyframes gi-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgb(20 108 148 / 0%);
+  }
+
+  50% {
+    transform: scale(1.06);
+    box-shadow: 0 0 0 0.35rem rgb(20 108 148 / 22%);
+  }
+}
+
+.gi-pulse {
+  animation: gi-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gi-pulse {
+    animation: none;
+    outline: 3px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  .cube-fold-viewer,
+  .cube-fold-viewer *,
+  .cube-canvas-shell,
+  .cube-canvas-shell *,
+  .folding-screen,
+  .folding-screen * {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .gi-pulse,
+  .update-history-trigger,
+  .update-history-dialog,
+  button:focus-visible {
+    color: ButtonText;
+    border: 2px solid Highlight;
+    outline-color: Highlight;
+    background: Canvas;
+  }
+
+  .gi-pulse {
+    forced-color-adjust: none;
+    box-shadow: 0 0 0 3px Highlight;
+  }
+}
