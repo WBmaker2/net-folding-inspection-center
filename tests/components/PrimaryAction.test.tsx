@@ -41,4 +41,9 @@ describe('PrimaryAction', () => {
     );
     expect(document.querySelectorAll('.gi-pulse')).toHaveLength(0);
   });
+
+  it('does not pulse when a standalone caller omits the selector result', () => {
+    render(<PrimaryAction actionId="submit-prediction">제출</PrimaryAction>);
+    expect(document.querySelectorAll('.gi-pulse')).toHaveLength(0);
+  });
 });

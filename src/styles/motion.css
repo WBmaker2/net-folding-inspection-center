@@ -12,14 +12,29 @@
 }
 
 .gi-pulse {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+}
+
+.gi-pulse::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  content: '';
   animation: gi-pulse 1.6s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .gi-pulse {
-    animation: none;
     outline: 3px solid var(--accent);
     outline-offset: 3px;
+  }
+
+  .gi-pulse::after {
+    animation: none;
   }
 
   .cube-fold-viewer,

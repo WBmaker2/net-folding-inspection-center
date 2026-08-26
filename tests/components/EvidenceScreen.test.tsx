@@ -48,7 +48,7 @@ describe('EvidenceScreen', () => {
     const mission = getMissionById('cube-opposite-01');
     const onSubmit = vi.fn();
     const onComplete = vi.fn();
-    render(<EvidenceScreen mission={mission} onSubmit={onSubmit} onComplete={onComplete} />);
+    render(<EvidenceScreen mission={mission} criticalActionId="submit-evidence" onSubmit={onSubmit} onComplete={onComplete} />);
     await user.click(screen.getByRole('button', { name: '1번 면' }));
     await user.click(screen.getByRole('button', { name: '3번 면' }));
     await user.selectOptions(screen.getByLabelText('첫 번째 기하 낱말'), '맞은편');
@@ -76,6 +76,23 @@ describe('EvidenceScreen', () => {
     await user.click(screen.getByRole('button', { name: '근거 확인' }));
     expect(onSubmit).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toHaveTextContent('검사 결과를 확인할 수 없어');
+  });
+
+  it('does not leave a wrong submitted attempt actionable until a selection changes', async () => {
+    const user = userEvent.setup();
+    const mission = getMissionById('cube-opposite-01');
+    render(<EvidenceScreen mission={mission} criticalActionId="submit-evidence" onSubmit={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: '1번 면' }));
+    await user.click(screen.getByRole('button', { name: '3번 면' }));
+    await user.selectOptions(screen.getByLabelText('첫 번째 기하 낱말'), '면');
+    await user.selectOptions(screen.getByLabelText('두 번째 기하 낱말'), '맞은편');
+    await user.click(screen.getByRole('button', { name: '근거 확인' }));
+    expect(screen.getByRole('button', { name: '근거 확인' })).toBeDisabled();
+    expect(document.querySelectorAll('.gi-pulse')).toHaveLength(0);
+    await user.click(screen.getByRole('button', { name: '1번 면' }));
+    await user.click(screen.getByRole('button', { name: '1번 면' }));
+    expect(screen.getByRole('button', { name: '근거 확인' })).toBeEnabled();
+    expect(document.querySelectorAll('.gi-pulse')).toHaveLength(1);
   });
 
   it('uses the base face as repair-02 relation subject in preview', async () => {

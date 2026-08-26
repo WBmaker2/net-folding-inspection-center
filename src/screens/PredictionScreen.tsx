@@ -27,7 +27,7 @@ const faceIdsExcept = (mission: MissionDefinition, baseFaceId: FaceId | null): r
     .filter((faceId) => faceId !== (baseFaceId ?? mission.baseFaceId))
 );
 
-export function PredictionScreen({ mission, onSubmit, criticalActionId = 'submit-prediction', now = () => new Date().toISOString() }: PredictionScreenProps): React.JSX.Element {
+export function PredictionScreen({ mission, onSubmit, criticalActionId, now = () => new Date().toISOString() }: PredictionScreenProps): React.JSX.Element {
   const headingRef = useFocusHeading<HTMLHeadingElement>();
   const [baseFaceId, setBaseFaceId] = useState<FaceId | null>(null);
   const [predictedTopFaceId, setPredictedTopFaceId] = useState<FaceId | null>(null);

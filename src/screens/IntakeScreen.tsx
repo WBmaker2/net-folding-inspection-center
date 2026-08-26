@@ -28,7 +28,7 @@ const difficultyFor = (mission: MissionDefinition, missions: readonly MissionDef
 export function IntakeScreen({
   missions,
   completedMissionIds = [],
-  criticalActionId = 'select-mission',
+  criticalActionId,
   onSelectMission,
 }: IntakeScreenProps): React.JSX.Element {
   const completed = new Set(completedMissionIds);

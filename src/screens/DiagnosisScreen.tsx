@@ -76,7 +76,7 @@ export function DiagnosisScreen({
   baseFaceId = mission.baseFaceId,
   onSubmit,
   onReturnToFoldStep,
-  criticalActionId = 'submit-diagnosis',
+  criticalActionId,
 }: DiagnosisScreenProps): React.JSX.Element {
   const headingRef = useFocusHeading<HTMLHeadingElement>();
   const [selectedErrorType, setSelectedErrorType] = useState<DiagnosisSubmission['selectedErrorType'] | null>(null);

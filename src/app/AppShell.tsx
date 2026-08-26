@@ -24,16 +24,16 @@ export function AppShell({ children }: AppShellProps): React.JSX.Element {
       <footer className="site-footer">
         <div className="shell-width footer-content">
           <p>천천히 접고, 모서리와 면의 관계를 살펴보세요.</p>
+          <button
+            type="button"
+            className="update-history-trigger"
+            aria-haspopup="dialog"
+            onClick={() => setHistoryOpen(true)}
+          >
+            업데이트 내역
+          </button>
         </div>
       </footer>
-      <button
-        type="button"
-        className="update-history-trigger"
-        aria-haspopup="dialog"
-        onClick={() => setHistoryOpen(true)}
-      >
-        업데이트 내역
-      </button>
       <UpdateHistoryDialog open={historyOpen} onClose={() => setHistoryOpen(false)} />
     </>
   );

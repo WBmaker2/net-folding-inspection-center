@@ -33,6 +33,8 @@
 .update-history-dialog-content {
   display: grid;
   gap: 1rem;
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
   padding: clamp(1rem, 4vw, 1.5rem);
 }
 
@@ -78,5 +80,18 @@
   .mission-list,
   .repair-net-comparison {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .main-content {
+    padding-bottom: clamp(2rem, 8vw, 4rem);
+  }
+
+  .update-history-trigger {
+    position: static;
+    align-self: flex-end;
+    margin-inline-end: calc(env(safe-area-inset-right) + 16px);
+    margin-block-end: calc(env(safe-area-inset-bottom) + 16px);
   }
 }

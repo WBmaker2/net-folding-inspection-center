@@ -1,9 +1,21 @@
 import React from 'react';
-import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CHANGELOG } from '../../src/content/changelog';
+import { CHANGELOG, type IsoDate } from '../../src/content/changelog';
 import { UpdateHistoryDialog } from '../../src/components/common/UpdateHistoryDialog';
+
+const validIsoDate: IsoDate = '2026-08-27';
+void validIsoDate;
+// @ts-expect-error ISO dates require a four-digit year and two-digit month/day.
+const invalidShortDate: IsoDate = '1-1-1';
+// @ts-expect-error ISO month is limited to 01 through 12.
+const invalidMonth: IsoDate = '2026-13-01';
+// @ts-expect-error ISO day is limited to 01 through 31.
+const invalidDay: IsoDate = '2026-01-32';
+void invalidShortDate;
+void invalidMonth;
+void invalidDay;
 
 describe('UpdateHistoryDialog', () => {
   afterEach(cleanup);
@@ -40,8 +52,14 @@ describe('UpdateHistoryDialog', () => {
     }
     const { container } = render(<Harness />);
     const opener = screen.getByRole('button', { name: '업데이트 내역 열기' });
+    const dialogElement = container.querySelector('dialog') as HTMLDialogElement;
+    const showModal = vi.fn(function showModal(this: HTMLDialogElement): void { this.setAttribute('open', ''); });
+    const close = vi.fn(function close(this: HTMLDialogElement): void { this.removeAttribute('open'); });
+    Object.defineProperty(dialogElement, 'showModal', { configurable: true, value: showModal });
+    Object.defineProperty(dialogElement, 'close', { configurable: true, value: close });
     await user.click(opener);
     const dialog = screen.getByRole('dialog', { name: '업데이트 내역' });
+    expect(showModal).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(dialog.querySelector('h2')).toHaveFocus());
     await user.keyboard('{Escape}');
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -51,6 +69,24 @@ describe('UpdateHistoryDialog', () => {
     await user.click(opener);
     await user.click(screen.getByRole('button', { name: '닫기' }));
     expect(onClose).toHaveBeenCalledTimes(2);
+    expect(close).toHaveBeenCalledTimes(2);
     await waitFor(() => expect(opener).toHaveFocus());
+  });
+
+  it('handles a native cancel event once and restores focus when unmounted open', async () => {
+    const opener = document.createElement('button');
+    opener.type = 'button';
+    opener.textContent = '외부 열기 버튼';
+    document.body.append(opener);
+    opener.focus();
+    const onClose = vi.fn();
+    const view = render(<UpdateHistoryDialog open onClose={onClose} />);
+    const dialog = view.container.querySelector('dialog') as HTMLDialogElement;
+    await waitFor(() => expect(dialog.querySelector('h2')).toHaveFocus());
+    fireEvent(dialog, new Event('cancel', { cancelable: true }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    view.unmount();
+    expect(opener).toHaveFocus();
+    opener.remove();
   });
 });

@@ -1,7 +1,14 @@
 export type UpdateCategory = '설계' | '개발' | '접근성' | '콘텐츠' | '기하 엔진';
+export type Digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
+/** Four numeric segments keep the year width check tractable in TypeScript. */
+export type Year = `${number}${number}${number}${number}`;
+export type Month = `0${Exclude<Digit, '0'>}` | `1${'0' | '1' | '2'}`;
+export type Day = `0${Exclude<Digit, '0'>}` | `${'1' | '2'}${Digit}` | `3${'0' | '1'}`;
+type JoinDateSegments<Y extends string, M extends string, D extends string> = `${Y}-${M}-${D}`;
+export type IsoDate = JoinDateSegments<Year, Month, Day>;
 
 export interface UpdateEntry {
-  readonly date: `${number}-${number}-${number}`;
+  readonly date: IsoDate;
   readonly category: UpdateCategory;
   readonly summary: string;
 }

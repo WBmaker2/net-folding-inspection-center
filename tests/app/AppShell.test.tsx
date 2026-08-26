@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { cleanup, render, screen } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import { App } from '../../src/App';
 
 const layoutStyles = readFileSync(
@@ -13,6 +13,7 @@ const componentStyles = readFileSync(
 );
 
 describe('AppShell', () => {
+  afterEach(cleanup);
   it('shows the Korean inspection center introduction', () => {
     render(<App />);
 
@@ -25,6 +26,16 @@ describe('AppShell', () => {
     expect(layoutStyles).toContain(
       'padding-bottom: max(0.75rem, env(safe-area-inset-bottom));',
     );
-    expect(componentStyles).toMatch(/\.update-history-trigger\s*\{[\s\S]*position:\s*fixed;[\s\S]*right:\s*calc\(env\(safe-area-inset-right\) \+ 16px\);[\s\S]*bottom:\s*calc\(env\(safe-area-inset-bottom\) \+ 16px\);/);
+    expect(componentStyles).toContain('.update-history-trigger {');
+    expect(componentStyles).toContain('right: calc(env(safe-area-inset-right) + 16px);');
+    expect(componentStyles).toContain('bottom: calc(env(safe-area-inset-bottom) + 16px);');
+    expect(componentStyles).toContain('@media (max-width: 520px)');
+    expect(componentStyles).toContain('position: static;');
+  });
+
+  it('keeps the mobile update trigger in the footer flow', () => {
+    render(<App />);
+    const trigger = screen.getByRole('button', { name: '업데이트 내역' });
+    expect(trigger.closest('footer')).not.toBeNull();
   });
 });

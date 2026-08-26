@@ -49,7 +49,7 @@ function RepairScreenContent({
   onRotateDecoration,
   showDecorationRotation = true,
   now = () => new Date().toISOString(),
-  criticalActionId = 'confirm-repair',
+  criticalActionId,
 }: RepairScreenContentProps): React.JSX.Element {
   const headingRef = useFocusHeading<HTMLHeadingElement>();
   const [decorationPreviewNet, setDecorationPreviewNet] = useState<NetDefinition>(repairNet);

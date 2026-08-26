@@ -113,15 +113,23 @@ describe('Task 13 integrated learner flow', () => {
     await user.click(missionButton('맞은편 면 찾기 1'));
     expectPredictionLocked(container);
     await choosePrediction(user, 3);
+    expectOnePulse('다음 면 접기');
+    expect(screen.getByRole('button', { name: '업데이트 내역' })).not.toHaveClass('gi-pulse');
+    const frontView = screen.queryByRole('button', { name: '정면 고정' });
+    if (frontView !== null) expect(frontView).not.toHaveClass('gi-pulse');
     await finishFolding(user);
     expect(screen.queryByRole('heading', { name: '접힌 결과 진단하기' })).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '근거 문장 만들기' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: /^1번 면/ }));
     await user.click(screen.getByRole('button', { name: /^3번 면/ }));
     await chooseTerms(user, '맞은편', '접는 방향');
+    expectOnePulse('근거 확인');
     await user.click(screen.getByRole('button', { name: '근거 확인' }));
+    expectOnePulse('미션 완료 확인');
     await user.click(screen.getByRole('button', { name: '미션 완료 확인' }));
     expect(screen.getByRole('heading', { name: '검수 완료' })).toBeVisible();
+    expectOnePulse('다음 미션');
+    expect(screen.getByRole('button', { name: '접기 결과 다시 보기' })).not.toHaveClass('gi-pulse');
   });
 
   it('completes collision through diagnosis and one-face repair using canonical collision terms', async () => {

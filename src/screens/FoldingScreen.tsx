@@ -38,7 +38,7 @@ export function FoldingScreen({
   onStepChange,
   onComplete,
   onContinue,
-  criticalActionId = 'next-fold',
+  criticalActionId,
 }: FoldingScreenProps): React.JSX.Element {
   const reducedMotion = usePrefersReducedMotion();
   const [stepIndex, setStepIndex] = useState(() => clampStep(initialStepIndex));

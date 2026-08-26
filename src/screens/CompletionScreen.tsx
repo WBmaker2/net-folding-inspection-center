@@ -56,7 +56,7 @@ export function CompletionScreen({
   onNextMission,
   onReview,
   onNext,
-  criticalActionId = 'next-mission',
+  criticalActionId,
 }: CompletionScreenProps): React.JSX.Element {
   const headingRef = useFocusHeading<HTMLHeadingElement>();
   const [callbackError, setCallbackError] = useState('');

@@ -46,7 +46,7 @@ export function EvidenceScreen({
   onComplete,
   onCompletion,
   onCompleteMission,
-  criticalActionId = 'submit-evidence',
+  criticalActionId,
 }: EvidenceScreenProps): React.JSX.Element {
   const headingRef = useFocusHeading<HTMLHeadingElement>();
   const [selectedFaces, setSelectedFaces] = useState<FaceId[]>([]);
@@ -207,9 +207,9 @@ export function EvidenceScreen({
       <PrimaryAction
         actionId="submit-evidence"
         criticalActionId={criticalActionId}
-        isPrimary={submitted === null || !isCorrectDraft}
+        isPrimary={submitted === null}
         className="evidence-submit"
-        disabled={draft === null || preview === null}
+        disabled={draft === null || preview === null || submitted !== null}
         onClick={submit}
       >
         근거 확인

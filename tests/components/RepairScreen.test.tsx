@@ -71,7 +71,9 @@ describe('RepairScreen', () => {
       <RepairScreen mission={mission} onSubmit={vi.fn()} onRotateDecoration={onRotate} />,
     );
     await user.click(screen.getByRole('button', { name: /^3번 면/ }));
+    expect(document.querySelectorAll('.gi-pulse')).toHaveLength(0);
     await user.click(screen.getByRole('button', { name: /3번 장식/ }));
+    expect(screen.getByRole('button', { name: /3번 장식/ })).not.toHaveClass('gi-pulse');
     expect(onRotate).toHaveBeenCalledWith('F3', expect.objectContaining({ faces: expect.any(Array) }));
     const original = screen.getByRole('group', { name: '원본 전개도에서 수리할 면 선택' });
     expect(within(original).getByRole('button', { name: /^3번 면/ }).querySelector('svg'))
