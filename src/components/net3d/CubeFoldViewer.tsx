@@ -6,6 +6,10 @@ import { FoldScene } from './FoldScene';
 import { isWebGLAvailable } from './webgl';
 import './cube-fold-viewer.css';
 
+// Public compatibility export; implementation lives in a non-component module.
+// eslint-disable-next-line react-refresh/only-export-components
+export { isWebGLAvailable } from './webgl';
+
 export type CubeFoldView = 'front' | 'right' | 'top' | 'fixed-base';
 
 export interface CubeFoldViewerProps {

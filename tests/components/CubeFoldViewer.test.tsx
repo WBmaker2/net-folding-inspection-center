@@ -10,8 +10,13 @@ import {
   getSceneFaceEmphasis,
 } from '../../src/components/net3d/sceneModel';
 import { buildCameraPose } from '../../src/components/net3d/cameraModel';
+import { applyCameraPose } from '../../src/components/net3d/cameraModel';
+import { isWebGLAvailable as exportedWebGLProbe } from '../../src/components/net3d/CubeFoldViewer';
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 const mission = getMissionById('cube-track-01');
 const sequence = createFoldSequence(
@@ -103,11 +108,36 @@ describe('scene model and CubeFoldViewer', () => {
   });
 
   it('uses a hidden canvas area and falls back safely when WebGL is absent', () => {
-    const canvasFactory = vi.fn(() => document.createElement('canvas'));
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const canvasFactory = vi.fn(() => ({
+      getContext: vi.fn(() => null),
+    } as unknown as HTMLCanvasElement));
     expect(isWebGLAvailable(canvasFactory)).toBe(false);
+    expect(exportedWebGLProbe(canvasFactory)).toBe(false);
     const { container } = renderViewer();
     expect(screen.getByText('3D 보기를 사용할 수 없어 2D 관계 보기를 유지합니다.')).toBeVisible();
     expect(container.querySelector('canvas')).not.toBeInTheDocument();
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  it('applies each camera pose through the complete controller contract', () => {
+    const camera = {
+      position: { set: vi.fn() },
+      up: { set: vi.fn() },
+      lookAt: vi.fn(),
+      updateProjectionMatrix: vi.fn(),
+      zoom: 1,
+    };
+    const invalidate = vi.fn();
+    const pose = buildCameraPose('right');
+    applyCameraPose(camera, pose, invalidate);
+    expect(camera.position.set).toHaveBeenCalledWith(...pose.position);
+    expect(camera.up.set).toHaveBeenCalledWith(...pose.up);
+    expect(camera.lookAt).toHaveBeenCalledWith(...pose.target);
+    expect(camera.updateProjectionMatrix).toHaveBeenCalledTimes(1);
+    expect(invalidate).toHaveBeenCalledTimes(1);
   });
 
   it('uses a static patterned collision cue and reduced motion snap metadata', () => {

@@ -9,6 +9,27 @@ export interface CameraPose {
   readonly zoom: number;
 }
 
+export interface CameraLike {
+  readonly position: { set(x: number, y: number, z: number): void };
+  readonly up: { set(x: number, y: number, z: number): void };
+  lookAt(x: number, y: number, z: number): void;
+  updateProjectionMatrix(): void;
+  readonly zoom?: number;
+}
+
+export function applyCameraPose(
+  camera: CameraLike,
+  pose: CameraPose,
+  invalidate: () => void,
+): void {
+  camera.position.set(...pose.position);
+  camera.up.set(...pose.up);
+  camera.lookAt(...pose.target);
+  if ('zoom' in camera) Object.assign(camera, { zoom: pose.zoom });
+  camera.updateProjectionMatrix();
+  invalidate();
+}
+
 const scale = (value: readonly [number, number, number], amount: number): [number, number, number] => [
   value[0] * amount, value[1] * amount, value[2] * amount,
 ];

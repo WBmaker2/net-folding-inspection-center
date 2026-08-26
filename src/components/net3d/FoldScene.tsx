@@ -3,7 +3,7 @@ import { useThree } from '@react-three/fiber';
 import { useLayoutEffect } from 'react';
 import { Shape } from 'three';
 import type { FaceId } from '../../domain/net/types';
-import { buildCameraPose } from './cameraModel';
+import { applyCameraPose, buildCameraPose } from './cameraModel';
 import type { SceneFace } from './sceneModel';
 import {
   getCollisionPatternDescriptor,
@@ -50,12 +50,7 @@ function CameraController({
   useLayoutEffect(() => {
     const baseFace = faces.find((face) => face.id === baseFaceId) ?? faces[0];
     const pose = buildCameraPose(view, baseFace);
-    camera.position.set(...pose.position);
-    camera.up.set(...pose.up);
-    camera.lookAt(...pose.target);
-    if ('zoom' in camera) Object.assign(camera, { zoom: pose.zoom });
-    camera.updateProjectionMatrix();
-    invalidate();
+    applyCameraPose(camera, pose, invalidate);
   }, [baseFaceId, camera, faces, invalidate, view]);
   return null;
 }
