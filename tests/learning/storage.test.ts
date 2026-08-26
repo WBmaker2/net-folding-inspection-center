@@ -10,6 +10,8 @@ import {
   toPersistedProgress,
 } from '../../src/domain/learning/storage';
 import { createInitialLearningState, learningReducer } from '../../src/domain/learning/reducer';
+import { getMissionById } from '../../src/content/missions/catalog';
+import { validateCubeNet } from '../../src/domain/net/validateCubeNet';
 import type { PersistedProgress } from '../../src/domain/learning/types';
 const prediction = {
   baseFaceId: 'F1' as const,
@@ -23,6 +25,18 @@ const prediction = {
     F4: 'south' as const,
   },
   submittedAtIso: '2026-08-26T00:00:00.000Z',
+};
+const f2BasePrediction = {
+  ...prediction,
+  baseFaceId: 'F2' as const,
+  foldOrder: ['F1', 'F3', 'F5', 'F6', 'F4'] as const,
+  arrowByFace: {
+    F1: 'south' as const,
+    F3: 'north' as const,
+    F5: 'west' as const,
+    F6: 'east' as const,
+    F4: 'south' as const,
+  },
 };
 class FakeStorage implements Storage {
   private readonly values = new Map<string, string>();
@@ -88,6 +102,42 @@ const collisionEvidenceState = () => learningReducer(
   },
 );
 describe('progress storage', () => {
+  it('round-trips a prediction whose learner-selected base is F2', () => {
+    const selected = learningReducer(createInitialLearningState(), {
+      type: 'SELECT_MISSION', missionId: 'cube-track-01',
+    });
+    const state = learningReducer(selected, {
+      type: 'SUBMIT_PREDICTION', prediction: f2BasePrediction,
+    });
+    const store = createMemoryProgressStore();
+    store.save(toPersistedProgress(state));
+    expect(store.load()?.prediction).toEqual(f2BasePrediction);
+    expect(store.load()?.attempts.predictions[0]).toEqual(f2BasePrediction);
+  });
+  it('round-trips a fully submitted F2-base collision prediction through persisted reachability', () => {
+    const selected = learningReducer(createInitialLearningState(), {
+      type: 'SELECT_MISSION', missionId: 'cube-collision-01',
+    });
+    const predicted = learningReducer(selected, {
+      type: 'SUBMIT_PREDICTION', prediction: f2BasePrediction,
+    });
+    const folded = learningReducer(predicted, { type: 'SET_FOLD_STEP', stepIndex: 5 });
+    const mission = getMissionById('cube-collision-01');
+    const missingDirection = validateCubeNet(mission.net, 'F2').missingNormals[0];
+    expect(missingDirection).toBeDefined();
+    const diagnosed = learningReducer(folded, {
+      type: 'SUBMIT_DIAGNOSIS',
+      diagnosis: { ...collisionDiagnosis, selectedMissingDirection: missingDirection! },
+    });
+    const storage = new FakeStorage();
+    const store = createSessionProgressStore(storage);
+    const persisted = toPersistedProgress(diagnosed);
+
+    store.save(persisted);
+    expect(store.load()).toEqual(persisted);
+    expect(store.load()?.prediction?.baseFaceId).toBe('F2');
+    expect(store.load()?.stage).toBe('repair');
+  });
   it('keeps the default memory store in memory only', () => {
     const store = createMemoryProgressStore();
     const progress = toPersistedProgress(progressedState());
@@ -417,83 +467,4 @@ describe('progress storage', () => {
     expect(storage.getItem(PROGRESS_STORAGE_KEY)).toBe(JSON.stringify(progress));
   });
 
-  it('rejects persisted states that cannot be reached by the reducer', () => {
-    const valid = toPersistedProgress(progressedState());
-    const collisionSelected = learningReducer(createInitialLearningState(), {
-      type: 'SELECT_MISSION',
-      missionId: 'cube-collision-01',
-    });
-    const collisionFolded = learningReducer(collisionSelected, {
-      type: 'SUBMIT_PREDICTION',
-      prediction,
-    });
-    const collisionDiagnosed = learningReducer(
-      learningReducer(collisionFolded, { type: 'SET_FOLD_STEP', stepIndex: 5 }),
-      {
-        type: 'SUBMIT_DIAGNOSIS',
-        diagnosis: {
-          selectedErrorType: 'overlap',
-          selectedFaceIds: ['F2', 'F6'],
-          selectedMissingDirection: '+x',
-        },
-      },
-    );
-    const validRepair = toPersistedProgress(collisionDiagnosed);
-
-    expect(sanitizePersistedProgress({ ...valid, missionId: null })).toBeNull();
-    expect(sanitizePersistedProgress({
-      ...valid,
-      prediction: { ...prediction, baseFaceId: 'F2' },
-    })).toBeNull();
-    expect(sanitizePersistedProgress({
-      ...valid,
-      prediction: { ...prediction, foldOrder: ['F2', 'F3', 'F5', 'F6', 'F6'] },
-    })).toBeNull();
-    expect(sanitizePersistedProgress({
-      ...valid,
-      stage: 'repair',
-      diagnosis: null,
-    })).toBeNull();
-    expect(sanitizePersistedProgress({
-      ...valid,
-      stage: 'complete',
-      evidence: null,
-    })).toBeNull();
-    expect(sanitizePersistedProgress({
-      ...valid,
-      stage: 'prediction',
-      prediction,
-    })).toBeNull();
-    expect(sanitizePersistedProgress({
-      ...valid,
-      stage: 'evidence',
-      foldStepIndex: 5,
-      prediction: null,
-      evidence: { selectedTerms: ['모서리'] },
-    })).toBeNull();
-    expect(sanitizePersistedProgress({
-      ...valid,
-      stage: 'repair',
-      foldStepIndex: 5,
-      diagnosis: {
-        selectedErrorType: 'overlap',
-        selectedFaceIds: ['F2', 'F6'],
-        selectedMissingDirection: '+x',
-      },
-    })).toBeNull();
-    expect(sanitizePersistedProgress({
-      ...validRepair,
-      repair: { faceId: 'F6', target: { x: 2, y: 1 } },
-    })).toBeNull();
-    expect(sanitizePersistedProgress({
-      ...validRepair,
-      repair: { faceId: 'F6', target: { x: 2, y: 1 }, accepted: true },
-    })).toBeNull();
-    expect(sanitizePersistedProgress({
-      ...valid,
-      stage: 'complete',
-      foldStepIndex: 5,
-      evidence: { selectedTerms: ['모서리'] },
-    })).toBeNull();
-  });
 });

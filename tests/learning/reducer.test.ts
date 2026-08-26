@@ -10,6 +10,8 @@ import {
   canRevealFoldResult,
   getCriticalActionId,
 } from '../../src/domain/learning/selectors';
+import { getMissionById } from '../../src/content/missions/catalog';
+import { validateCubeNet } from '../../src/domain/net/validateCubeNet';
 import type {
   DiagnosisSubmission,
   EvidenceSubmission,
@@ -29,6 +31,15 @@ const prediction: PredictionRecord = {
     F4: 'south',
   },
   submittedAtIso: '2026-08-26T00:00:00.000Z',
+};
+const f2BasePrediction: PredictionRecord = {
+  ...prediction,
+  baseFaceId: 'F2',
+  predictedTopFaceId: 'F3',
+  foldOrder: ['F1', 'F3', 'F5', 'F6', 'F4'],
+  arrowByFace: {
+    F1: 'south', F3: 'north', F5: 'west', F6: 'east', F4: 'south',
+  },
 };
 
 const diagnosis: DiagnosisSubmission = {
@@ -312,14 +323,20 @@ describe('learning reducer', () => {
     expect(returned.attempts.diagnoses).toHaveLength(1);
   });
 
-  it('rejects a prediction from another base and stale completion mission', () => {
+  it('accepts any learner-selected base and validates five moving faces relative to it', () => {
     const selected = learningReducer(createInitialLearningState(), {
       type: 'SELECT_MISSION',
       missionId: 'cube-track-01',
     });
+    const predicted = learningReducer(selected, {
+      type: 'SUBMIT_PREDICTION',
+      prediction: f2BasePrediction,
+    });
+    expect(predicted.stage).toBe('folding');
+    expect(predicted.prediction).toEqual(f2BasePrediction);
     expect(() => learningReducer(selected, {
       type: 'SUBMIT_PREDICTION',
-      prediction: { ...prediction, baseFaceId: 'F2' },
+      prediction: { ...f2BasePrediction, predictedTopFaceId: 'F2' },
     })).toThrow(InvalidLearningTransitionError);
 
     const completed = learningReducer(
@@ -338,6 +355,24 @@ describe('learning reducer', () => {
       type: 'COMPLETE_MISSION',
       missionId: 'cube-track-01',
     })).toThrow(StaleLearningActionError);
+  });
+
+  it('recomputes a collision missing axis from the learner-selected base', () => {
+    const selected = learningReducer(createInitialLearningState(), {
+      type: 'SELECT_MISSION', missionId: 'cube-collision-01',
+    });
+    const predicted = learningReducer(selected, {
+      type: 'SUBMIT_PREDICTION', prediction: f2BasePrediction,
+    });
+    const folded = learningReducer(predicted, { type: 'SET_FOLD_STEP', stepIndex: 5 });
+    const mission = getMissionById('cube-collision-01');
+    const expectedDirection = validateCubeNet(mission.net, 'F2').missingNormals[0];
+    expect(expectedDirection).toBeDefined();
+    const diagnosed = learningReducer(folded, {
+      type: 'SUBMIT_DIAGNOSIS',
+      diagnosis: { ...diagnosis, selectedMissingDirection: expectedDirection! },
+    });
+    expect(diagnosed.stage).toBe('repair');
   });
 
   it('selects one critical action for each stage', () => {

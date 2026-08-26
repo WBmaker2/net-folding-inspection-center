@@ -1,5 +1,6 @@
 import type { Ref } from 'react';
 import type { FaceDefinition } from '../../domain/net/types';
+import { faceAccessibleName, faceNumber } from './faceLabels';
 
 export interface FaceTileProps {
   readonly face: FaceDefinition;
@@ -12,32 +13,6 @@ export interface FaceTileProps {
   readonly onClick?: React.MouseEventHandler<HTMLButtonElement>;
   readonly buttonRef?: Ref<HTMLButtonElement>;
 }
-
-const colorLabels: Readonly<Record<FaceDefinition['colorToken'], string>> = {
-  blue: '파란색',
-  yellow: '노란색',
-  green: '초록색',
-  coral: '산호색',
-  purple: '보라색',
-  teal: '청록색',
-};
-
-const symbolLabels: Readonly<Record<FaceDefinition['symbol'], string>> = {
-  circle: '원형',
-  square: '사각형',
-  triangle: '삼각형',
-  star: '별',
-  diamond: '마름모',
-  cross: '십자',
-};
-
-export const faceNumber = (face: FaceDefinition): number => Number(face.id.slice(1));
-
-export const faceAccessibleName = (face: FaceDefinition, positionLabel?: string): string => (
-  `${faceNumber(face)}번 면, ${colorLabels[face.colorToken]}, ${symbolLabels[face.symbol]}${
-    positionLabel === undefined ? '' : `, ${positionLabel}`
-  }`
-);
 
 function FacePattern({ face }: { readonly face: FaceDefinition }): React.JSX.Element {
   const common = { className: `face-pattern face-pattern-${face.colorToken}` };
@@ -92,14 +67,10 @@ export function FaceTile({
       <svg
         className="face-tile-symbol"
         viewBox="0 0 48 48"
-        role="img"
-        aria-label={`${number}번 면 ${symbolLabels[face.symbol]} 무늬`}
+        aria-hidden="true"
       >
         <FacePattern face={face} />
       </svg>
-      <span className="sr-only">{name}</span>
     </button>
   );
 }
-
-export { colorLabels, symbolLabels };

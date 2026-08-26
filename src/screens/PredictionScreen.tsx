@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { NetGrid } from '../components/net2d/NetGrid';
-import { faceNumber } from '../components/net2d/FaceTile';
+import { faceNumber } from '../components/net2d/faceLabels';
 import { useFocusHeading } from '../hooks/useFocusHeading';
 import '../styles/net2d.css';
 import type { MissionDefinition } from '../domain/learning/types';
@@ -9,6 +9,7 @@ import type { FaceId, FoldDirection, PredictionRecord } from '../domain/net/type
 export interface PredictionScreenProps {
   readonly mission: MissionDefinition;
   readonly onSubmit: (prediction: PredictionRecord) => void;
+  readonly now?: () => string;
 }
 
 const directions: readonly { value: FoldDirection; label: string; glyph: string }[] = [
@@ -24,13 +25,14 @@ const faceIdsExcept = (mission: MissionDefinition, baseFaceId: FaceId | null): r
     .filter((faceId) => faceId !== (baseFaceId ?? mission.baseFaceId))
 );
 
-export function PredictionScreen({ mission, onSubmit }: PredictionScreenProps): React.JSX.Element {
+export function PredictionScreen({ mission, onSubmit, now = () => new Date().toISOString() }: PredictionScreenProps): React.JSX.Element {
   const headingRef = useFocusHeading<HTMLHeadingElement>();
   const [baseFaceId, setBaseFaceId] = useState<FaceId | null>(null);
   const [predictedTopFaceId, setPredictedTopFaceId] = useState<FaceId | null>(null);
   const [foldOrder, setFoldOrder] = useState<FaceId[]>([]);
   const [arrowByFace, setArrowByFace] = useState<Partial<Record<FaceId, FoldDirection>>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [hasInteracted, setHasInteracted] = useState(false);
 
   const movingFaceIds = useMemo(
     () => faceIdsExcept(mission, baseFaceId),
@@ -47,6 +49,7 @@ export function PredictionScreen({ mission, onSubmit }: PredictionScreenProps): 
     && movingFaceIds.every((faceId) => foldOrder.includes(faceId) && arrowByFace[faceId] !== undefined);
 
   const selectBase = (faceId: FaceId): void => {
+    setHasInteracted(true);
     setBaseFaceId(faceId);
     setPredictedTopFaceId(null);
     setFoldOrder([]);
@@ -55,16 +58,21 @@ export function PredictionScreen({ mission, onSubmit }: PredictionScreenProps): 
   };
 
   const selectTop = (faceId: FaceId): void => {
-    if (faceId !== baseFaceId) setPredictedTopFaceId(faceId);
+    if (faceId !== baseFaceId) {
+      setHasInteracted(true);
+      setPredictedTopFaceId(faceId);
+    }
   };
 
   const addFaceToOrder = (faceId: FaceId): void => {
     if (baseFaceId === null || faceId === baseFaceId || foldOrder.includes(faceId)) return;
+    setHasInteracted(true);
     setFoldOrder((previous) => previous.length >= 5 ? previous : [...previous, faceId]);
     setSubmitted(false);
   };
 
   const removeFaceFromOrder = (faceId: FaceId): void => {
+    setHasInteracted(true);
     setFoldOrder((previous) => previous.filter((candidate) => candidate !== faceId));
     setArrowByFace((previous) => {
       const next = { ...previous };
@@ -75,6 +83,7 @@ export function PredictionScreen({ mission, onSubmit }: PredictionScreenProps): 
   };
 
   const setDirection = (faceId: FaceId, direction: FoldDirection): void => {
+    setHasInteracted(true);
     setArrowByFace((previous) => ({ ...previous, [faceId]: direction }));
     setSubmitted(false);
   };
@@ -88,10 +97,10 @@ export function PredictionScreen({ mission, onSubmit }: PredictionScreenProps): 
       arrowByFace: Object.fromEntries(
         movingFaceIds.map((faceId) => [faceId, arrowByFace[faceId]]),
       ) as PredictionRecord['arrowByFace'],
-      submittedAtIso: new Date().toISOString(),
+      submittedAtIso: now(),
     };
-    setSubmitted(true);
     onSubmit(prediction);
+    setSubmitted(true);
   };
 
   return (
@@ -165,7 +174,7 @@ export function PredictionScreen({ mission, onSubmit }: PredictionScreenProps): 
             );
           })}
         </ol>
-        {foldOrder.length !== 5 && (
+        {hasInteracted && foldOrder.length !== 5 && (
           <p className="field-error" role="alert">기준면을 제외한 면 5개를 순서대로 넣어 주세요.</p>
         )}
       </section>
@@ -195,7 +204,7 @@ export function PredictionScreen({ mission, onSubmit }: PredictionScreenProps): 
                     </button>
                   ))}
                 </div>
-                {arrowByFace[faceId] === undefined && (
+                {hasInteracted && arrowByFace[faceId] === undefined && (
                   <p className="field-error" role="alert">{number}번 면의 접는 방향을 골라 주세요.</p>
                 )}
               </fieldset>
@@ -204,7 +213,7 @@ export function PredictionScreen({ mission, onSubmit }: PredictionScreenProps): 
         </div>
       </section>
 
-      <p className="field-error" role="alert" hidden={!submitted}>
+      <p className="field-success" role="status" hidden={!submitted}>
         예측을 기록했습니다. 이제 접기실에서 한 면씩 확인해 보세요.
       </p>
       <button

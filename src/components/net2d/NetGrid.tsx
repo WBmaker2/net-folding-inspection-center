@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { FaceId, FaceDefinition, NetDefinition } from '../../domain/net/types';
-import { FaceTile, faceAccessibleName } from './FaceTile';
+import { FaceTile } from './FaceTile';
 
 export type NetGridMode = 'inspect' | 'select-base' | 'select-move-target';
 
@@ -34,19 +34,13 @@ const nearestInDirection = (
     return delta * vector.sign > 0;
   });
   return candidates.sort((left, right) => {
-    const leftPrimary = vector.primary === 'x'
-      ? Math.abs(left.grid.x - current.grid.x)
-      : Math.abs(left.grid.y - current.grid.y);
-    const rightPrimary = vector.primary === 'x'
-      ? Math.abs(right.grid.x - current.grid.x)
-      : Math.abs(right.grid.y - current.grid.y);
-    const leftSecondary = vector.primary === 'x'
-      ? Math.abs(left.grid.y - current.grid.y)
-      : Math.abs(left.grid.x - current.grid.x);
-    const rightSecondary = vector.primary === 'x'
-      ? Math.abs(right.grid.y - current.grid.y)
-      : Math.abs(right.grid.x - current.grid.x);
-    return leftPrimary - rightPrimary || leftSecondary - rightSecondary;
+    const leftX = left.grid.x - current.grid.x;
+    const leftY = left.grid.y - current.grid.y;
+    const rightX = right.grid.x - current.grid.x;
+    const rightY = right.grid.y - current.grid.y;
+    const leftDistance = leftX * leftX + leftY * leftY;
+    const rightDistance = rightX * rightX + rightY * rightY;
+    return leftDistance - rightDistance || left.id.localeCompare(right.id);
   })[0];
 };
 
@@ -101,7 +95,12 @@ export function NetGrid({
       moveFocus(face, event.key as keyof typeof directionVectors);
       return;
     }
-    if ((event.key === 'Enter' || event.key === ' ') && onFaceSelect !== undefined) {
+    const isActivationKey = event.key === 'Enter'
+      || event.key === ' '
+      || event.key === 'Spacebar'
+      || event.key === 'Space'
+      || event.code === 'Space';
+    if (isActivationKey && onFaceSelect !== undefined) {
       event.preventDefault();
       onFaceSelect(face.id);
     }
@@ -143,7 +142,6 @@ export function NetGrid({
                   buttonRefs.current[face.id] = element;
                 }}
               />
-              <span className="sr-only">{faceAccessibleName(face, faceLabel)}</span>
             </div>
           );
         })}

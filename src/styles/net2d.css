@@ -139,6 +139,12 @@
   font-weight: 700;
 }
 
+.field-success {
+  margin: 0.75rem 0;
+  color: #1d6b43;
+  font-weight: 800;
+}
+
 .prediction-submit {
   width: 100%;
   border-color: var(--accent);

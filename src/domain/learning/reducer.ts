@@ -60,17 +60,20 @@ const freezeArray = <T>(items: readonly T[]): readonly T[] => Object.freeze([...
 
 const freezePoint = (point: GridPoint): GridPoint => Object.freeze({ x: point.x, y: point.y });
 
-const movingFaceIdsFor = (mission: MissionDefinition): readonly FaceId[] => (
+const movingFaceIdsFor = (
+  mission: MissionDefinition,
+  baseFaceId = mission.baseFaceId,
+): readonly FaceId[] => (
   mission.net.faces
     .map((face) => face.id)
-    .filter((faceId) => faceId !== mission.baseFaceId)
+    .filter((faceId) => faceId !== baseFaceId)
 );
 const clonePrediction = (
   prediction: PredictionRecord,
   mission: MissionDefinition,
 ): PredictionRecord => {
   const arrowByFace: Partial<Record<FaceId, FoldDirection>> = {};
-  movingFaceIdsFor(mission).forEach((faceId) => {
+  movingFaceIdsFor(mission, prediction.baseFaceId).forEach((faceId) => {
     arrowByFace[faceId] = prediction.arrowByFace[faceId] as FoldDirection;
   });
   return Object.freeze({
@@ -199,10 +202,16 @@ const validatePrediction = (
   if (value === null || typeof value !== 'object') {
     throw transitionError(state, action, 'A prediction record is required');
   }
-  if (value.baseFaceId !== mission.baseFaceId) {
+  const missionFaces = mission.net.faces.map((face) => face.id);
+  if (!missionFaces.includes(value.baseFaceId)) {
     throw transitionError(state, action, 'The prediction base face does not match this mission');
   }
-  const missionFaces = mission.net.faces.map((face) => face.id);
+  if (!isFaceId(value.predictedTopFaceId)
+    || !missionFaces.includes(value.predictedTopFaceId)
+    || value.predictedTopFaceId === value.baseFaceId) {
+    throw transitionError(state, action, 'The predicted top face must differ from the base face');
+  }
+  const movingFaceIds = missionFaces.filter((faceId) => faceId !== value.baseFaceId);
   if (!Array.isArray(value.foldOrder)
     || value.foldOrder.length !== missionFaces.length - 1
     || !value.foldOrder.every(isFaceId)) {
@@ -210,21 +219,17 @@ const validatePrediction = (
   }
   const movingFaces = value.foldOrder as unknown as readonly FaceId[];
   if (movingFaces.length !== missionFaces.length - 1
-    || !sameFaceSet(movingFaces, missionFaces.filter((faceId) => faceId !== mission.baseFaceId))) {
+    || !sameFaceSet(movingFaces, movingFaceIds)) {
     throw transitionError(state, action, 'The prediction must contain each moving face exactly once');
-  }
-  if (!isFaceId(value.predictedTopFaceId)) {
-    throw transitionError(state, action, 'The predicted top face is not a face in the cube net');
   }
   if (!isRecord(value.arrowByFace)) {
     throw transitionError(state, action, 'The prediction fold directions are invalid');
   }
-  const movingFaceIds = missionFaces.filter((faceId) => faceId !== mission.baseFaceId);
   const arrowKeys = Reflect.ownKeys(value.arrowByFace);
   if (arrowKeys.length !== movingFaceIds.length
     || arrowKeys.some((key) => typeof key !== 'string')
     || arrowKeys.some((key) => (
-      !isFaceId(key) || key === mission.baseFaceId || !movingFaceIds.includes(key)
+      !isFaceId(key) || key === value.baseFaceId || !movingFaceIds.includes(key)
     ))
     || movingFaceIds.some((faceId) => !Object.prototype.hasOwnProperty.call(value.arrowByFace, faceId))) {
     throw transitionError(state, action, 'The prediction must define one direction for each moving face');
@@ -333,16 +338,15 @@ const expectedCollisionFaces = (mission: MissionDefinition): readonly FaceId[] =
 const diagnosisIsCorrect = (
   mission: MissionDefinition,
   diagnosis: DiagnosisSubmission,
+  baseFaceId = mission.baseFaceId,
 ): boolean => {
   if (diagnosis.selectedErrorType !== mission.errorModel) return false;
   if (mission.kind !== 'collision' && mission.kind !== 'repair') return false;
   const expectedFaces = expectedCollisionFaces(mission);
   if (!sameFaceSet(diagnosis.selectedFaceIds, expectedFaces)) return false;
   if (diagnosis.selectedMissingDirection === undefined) return false;
-  const validation = validateCubeNet(mission.net, mission.baseFaceId);
-  const expectedDirection = mission.kind === 'collision'
-    ? mission.answer.missingDirection
-    : validation.missingNormals[0];
+  const validation = validateCubeNet(mission.net, baseFaceId);
+  const expectedDirection = validation.missingNormals[0];
   return diagnosis.selectedMissingDirection === expectedDirection;
 };
 
@@ -418,7 +422,7 @@ export const learningReducer = (
       const diagnosis = validateDiagnosis(state, action);
       return freezeState({
         ...state,
-        stage: diagnosisIsCorrect(mission, diagnosis) ? 'repair' : 'diagnosis',
+        stage: diagnosisIsCorrect(mission, diagnosis, state.prediction?.baseFaceId) ? 'repair' : 'diagnosis',
         diagnosis,
         attempts: appendDiagnosis(state, diagnosis),
       });
