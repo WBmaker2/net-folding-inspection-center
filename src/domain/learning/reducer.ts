@@ -1,5 +1,5 @@
 import { getMissionById } from '../../content/missions/catalog';
-import { validateCubeNet } from '../net/validateCubeNet';
+import { evaluateDiagnosis } from './diagnosis';
 import type {
   AxisDirection,
   FaceId,
@@ -327,28 +327,11 @@ const appendEvidence = (state: LearningState, evidence: EvidenceSubmission): Lea
   evidence: freezeArray([...state.attempts.evidence, evidence]),
 });
 
-const expectedCollisionFaces = (mission: MissionDefinition): readonly FaceId[] => {
-  if (mission.kind === 'collision') return mission.answer.collisionPair;
-  if (mission.kind === 'repair') {
-    return validateCubeNet(mission.net, mission.baseFaceId).collisions[0]?.faceIds ?? [];
-  }
-  return [];
-};
-
 const diagnosisIsCorrect = (
   mission: MissionDefinition,
   diagnosis: DiagnosisSubmission,
   baseFaceId = mission.baseFaceId,
-): boolean => {
-  if (diagnosis.selectedErrorType !== mission.errorModel) return false;
-  if (mission.kind !== 'collision' && mission.kind !== 'repair') return false;
-  const expectedFaces = expectedCollisionFaces(mission);
-  if (!sameFaceSet(diagnosis.selectedFaceIds, expectedFaces)) return false;
-  if (diagnosis.selectedMissingDirection === undefined) return false;
-  const validation = validateCubeNet(mission.net, baseFaceId);
-  const expectedDirection = validation.missingNormals[0];
-  return diagnosis.selectedMissingDirection === expectedDirection;
-};
+): boolean => evaluateDiagnosis(mission, diagnosis, baseFaceId).isCorrect;
 
 const assertActiveStage = (
   state: LearningState,
@@ -404,7 +387,7 @@ export const learningReducer = (
       }
       const mission = missionFor(state, action);
       const nextStage = action.stepIndex === FOLD_STEP_COUNT
-        ? (mission.kind === 'collision' || mission.kind === 'repair' ? 'diagnosis' : 'evidence')
+        ? (mission.kind === 'opposite' ? 'evidence' : 'diagnosis')
         : 'folding';
       return freezeState({
         ...state,
@@ -416,13 +399,16 @@ export const learningReducer = (
       assertActiveStage(state, action, 'diagnosis');
       assertMissionScope(state, action);
       const mission = missionFor(state, action);
-      if (mission.kind !== 'collision' && mission.kind !== 'repair') {
+      if (mission.kind === 'opposite') {
         throw transitionError(state, action, 'This mission has no diagnosis stage');
       }
       const diagnosis = validateDiagnosis(state, action);
+      const diagnosisAccepted = diagnosisIsCorrect(mission, diagnosis, state.prediction?.baseFaceId);
       return freezeState({
         ...state,
-        stage: diagnosisIsCorrect(mission, diagnosis, state.prediction?.baseFaceId) ? 'repair' : 'diagnosis',
+        stage: diagnosisAccepted
+          ? (mission.kind === 'tracking' ? 'evidence' : 'repair')
+          : 'diagnosis',
         diagnosis,
         attempts: appendDiagnosis(state, diagnosis),
       });

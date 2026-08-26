@@ -298,3 +298,88 @@
     padding: 0.55rem 0.35rem;
   }
 }
+
+.diagnosis-screen {
+  width: min(100%, 58rem);
+}
+
+.diagnosis-intro {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.diagnosis-validation-panel,
+.diagnosis-fieldset {
+  margin-block: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  background: var(--surface);
+}
+
+.diagnosis-validation-panel h2,
+.diagnosis-fieldset legend {
+  font-weight: 900;
+}
+
+.diagnosis-validation-panel h2 {
+  margin-top: 0;
+  font-size: 1.05rem;
+}
+
+.diagnosis-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  margin-block: 0.25rem;
+}
+
+.diagnosis-face-options,
+.diagnosis-axis-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.diagnosis-face-button,
+.diagnosis-submit,
+.diagnosis-review-button {
+  min-height: 2.75rem;
+  padding: 0.55rem 0.8rem;
+  border: 2px solid var(--line);
+  border-radius: 0.6rem;
+  color: var(--ink);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.diagnosis-face-button.is-selected,
+.diagnosis-face-button:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.diagnosis-face-button:disabled,
+.diagnosis-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.diagnosis-submit {
+  width: 100%;
+  margin-top: 1rem;
+  border-color: var(--accent);
+  color: #fff;
+  background: var(--accent);
+  font-weight: 900;
+}
+
+.diagnosis-submit:disabled {
+  color: var(--muted-ink);
+  background: var(--line);
+}
+
+.diagnosis-review-button {
+  margin-top: 0.75rem;
+}

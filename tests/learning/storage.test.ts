@@ -219,15 +219,15 @@ describe('progress storage', () => {
     storage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify({
       version: 1,
       missionId: 'cube-track-01',
-      stage: 'evidence',
+      stage: 'diagnosis',
       prediction,
       foldStepIndex: 5,
       diagnosis: null,
       repair: null,
-      evidence: { selectedTerms: ['모서리', '겹침'] },
+      evidence: null,
       attempts: {
         predictions: [prediction], diagnoses: [], repairs: [],
-        evidence: [{ selectedTerms: ['모서리', '겹침'] }],
+        evidence: [],
       },
       completedMissionIds: [],
       studentName: 'Ada',
@@ -434,11 +434,7 @@ describe('progress storage', () => {
   });
 
   it('strips the completed sentence from current and attempted evidence', () => {
-    const folded = learningReducer(progressedState(), {
-      type: 'SET_FOLD_STEP',
-      stepIndex: 5,
-    });
-    const evidenced = learningReducer(folded, {
+    const evidenced = learningReducer(collisionEvidenceState(), {
       type: 'SUBMIT_EVIDENCE',
       evidence: {
         selectedTerms: ['면', '접는 방향'],
@@ -450,7 +446,10 @@ describe('progress storage', () => {
     const serialized = JSON.stringify(persisted);
     expect(serialized).not.toMatch(/Ada|ada@example|원문|completedSentence/u);
     expect(persisted.evidence).toEqual({ selectedTerms: ['면', '접는 방향'] });
-    expect(persisted.attempts.evidence).toEqual([{ selectedTerms: ['면', '접는 방향'] }]);
+    expect(persisted.attempts.evidence).toEqual([
+      { selectedTerms: ['모서리', '겹침'] },
+      { selectedTerms: ['면', '접는 방향'] },
+    ]);
   });
 
   it('rewrites a valid payload immediately when unknown fields are present', () => {

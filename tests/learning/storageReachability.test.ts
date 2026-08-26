@@ -20,6 +20,21 @@ const collisionState = () => {
 };
 
 describe('persisted reachability', () => {
+  it('accepts the tracking diagnosis gate before persisted evidence', () => {
+    const selected = learningReducer(createInitialLearningState(), {
+      type: 'SELECT_MISSION', missionId: 'cube-track-01',
+    });
+    const predicted = learningReducer(selected, { type: 'SUBMIT_PREDICTION', prediction });
+    const folded = learningReducer(predicted, { type: 'SET_FOLD_STEP', stepIndex: 5 });
+    expect(folded.stage).toBe('diagnosis');
+    const diagnosed = learningReducer(folded, {
+      type: 'SUBMIT_DIAGNOSIS',
+      diagnosis: { selectedErrorType: 'decoration-direction', selectedFaceIds: ['F3'] },
+    });
+    expect(diagnosed.stage).toBe('evidence');
+    expect(sanitizePersistedProgress(toPersistedProgress(diagnosed))).not.toBeNull();
+  });
+
   it('rejects states that cannot be reached by the reducer', () => {
     const selected = learningReducer(createInitialLearningState(), {
       type: 'SELECT_MISSION', missionId: 'cube-track-01',

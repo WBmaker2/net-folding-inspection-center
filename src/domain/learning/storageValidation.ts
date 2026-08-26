@@ -1,5 +1,5 @@
 import { getMissionById } from '../../content/missions/catalog';
-import { validateCubeNet } from '../net/validateCubeNet';
+import { evaluateDiagnosis } from './diagnosis';
 import type {
   AxisDirection,
   DiagnosisSubmission,
@@ -224,34 +224,11 @@ const predictionMatchesMission = (
     && prediction.foldOrder.every((faceId) => movingFaceIds.includes(faceId));
 };
 
-const sameFaceSet = (left: readonly FaceId[], right: readonly FaceId[]): boolean => (
-  left.length === right.length
-  && new Set(left).size === left.length
-  && new Set(right).size === right.length
-  && left.every((faceId) => right.includes(faceId))
-);
-
-const expectedCollisionFaces = (mission: MissionDefinition): readonly FaceId[] => {
-  if (mission.kind === 'collision') return mission.answer.collisionPair;
-  if (mission.kind === 'repair') {
-    return validateCubeNet(mission.net, mission.baseFaceId).collisions[0]?.faceIds ?? [];
-  }
-  return [];
-};
-
 const diagnosisIsCorrect = (
   mission: MissionDefinition,
   diagnosis: DiagnosisSubmission,
   baseFaceId = mission.baseFaceId,
-): boolean => {
-  if (mission.kind !== 'collision' && mission.kind !== 'repair') return false;
-  if (diagnosis.selectedErrorType !== mission.errorModel
-    || !sameFaceSet(diagnosis.selectedFaceIds, expectedCollisionFaces(mission))
-    || diagnosis.selectedMissingDirection === undefined) return false;
-  const expectedDirection = validateCubeNet(mission.net, baseFaceId).missingNormals[0];
-  return expectedDirection !== undefined
-    && diagnosis.selectedMissingDirection === expectedDirection;
-};
+): boolean => evaluateDiagnosis(mission, diagnosis, baseFaceId).isCorrect;
 
 const hasNoReviewData = (
   diagnosis: DiagnosisSubmission | null,
@@ -317,7 +294,7 @@ const isReachableProgress = (
   }
   if (foldStepIndex !== 5) return false;
 
-  const diagnosticMission = mission.kind === 'collision' || mission.kind === 'repair';
+  const diagnosticMission = mission.kind !== 'opposite';
   if (!diagnosticMission && (attempts.diagnoses.length > 0 || attempts.repairs.length > 0)) {
     return false;
   }
@@ -326,15 +303,18 @@ const isReachableProgress = (
       && (diagnosis === null || !diagnosisIsCorrect(mission, diagnosis, prediction.baseFaceId));
   }
   if (stage === 'repair') {
-    return diagnosticMission && diagnosis !== null
+    return (mission.kind === 'collision' || mission.kind === 'repair') && diagnosis !== null
       && diagnosisIsCorrect(mission, diagnosis, prediction.baseFaceId)
       && evidence === null
       && (repair === null || repair.accepted === false);
   }
   if (stage === 'evidence' || stage === 'complete') {
-    if (diagnosticMission) {
+    if (mission.kind === 'collision' || mission.kind === 'repair') {
       if (diagnosis === null || !diagnosisIsCorrect(mission, diagnosis, prediction.baseFaceId)
         || repair === null || repair.accepted !== true) return false;
+    } else if (mission.kind === 'tracking') {
+      if (diagnosis === null || !diagnosisIsCorrect(mission, diagnosis, prediction.baseFaceId)
+        || repair !== null) return false;
     } else if (diagnosis !== null || repair !== null) {
       return false;
     }

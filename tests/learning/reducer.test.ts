@@ -185,12 +185,33 @@ describe('learning reducer', () => {
       type: 'SET_FOLD_STEP',
       stepIndex: 5,
     });
-    expect(trackingDone.stage).toBe('evidence');
+    expect(trackingDone.stage).toBe('diagnosis');
 
     const collisionDone = foldedCollision();
     expect(collisionDone.stage).toBe('diagnosis');
     expect(collisionDone.foldStepIndex).toBe(5);
     expect(canRevealFoldResult(collisionDone)).toBe(true);
+  });
+
+  it('requires and accepts the exact tracking decoration diagnosis before evidence', () => {
+    const tracking = learningReducer(
+      learningReducer(createInitialLearningState(), {
+        type: 'SELECT_MISSION', missionId: 'cube-track-01',
+      }),
+      { type: 'SUBMIT_PREDICTION', prediction },
+    );
+    const folded = learningReducer(tracking, { type: 'SET_FOLD_STEP', stepIndex: 5 });
+    expect(folded.stage).toBe('diagnosis');
+    const wrong = learningReducer(folded, {
+      type: 'SUBMIT_DIAGNOSIS',
+      diagnosis: { selectedErrorType: 'decoration-direction', selectedFaceIds: ['F2'] },
+    });
+    expect(wrong.stage).toBe('diagnosis');
+    const right = learningReducer(folded, {
+      type: 'SUBMIT_DIAGNOSIS',
+      diagnosis: { selectedErrorType: 'decoration-direction', selectedFaceIds: ['F3'] },
+    });
+    expect(right.stage).toBe('evidence');
   });
 
   it('rejects out-of-range and backwards fold actions outside the fold stage', () => {
