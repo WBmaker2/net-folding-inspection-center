@@ -1,6 +1,7 @@
 import { getMissionById } from '../../content/missions/catalog';
 import { evaluateDiagnosis } from './diagnosis';
 import { evaluateRepair } from './repair';
+import { evaluateEvidenceSubmission, expectedEvidenceSentence } from './evidence';
 import type {
   AxisDirection,
   DiagnosisSubmission,
@@ -329,6 +330,25 @@ const isReachableProgress = (
   if (attempts.repairs.some((repair) => !repairMatchesMission(mission, repair, prediction.baseFaceId))) {
     return false;
   }
+  const evidenceAttemptsAreStructured = attempts.evidence.every((persistedEvidence) => {
+    const evidence = {
+      ...(persistedEvidence.oppositePair === undefined ? {} : {
+        oppositePair: persistedEvidence.oppositePair,
+      }),
+      selectedTerms: persistedEvidence.selectedTerms,
+      completedSentence: '',
+    };
+    const contextInput = {
+      baseFaceId: prediction.baseFaceId,
+      diagnosis,
+      repair,
+    };
+    const evaluation = evaluateEvidenceSubmission(mission, evidence, contextInput);
+    const generated = expectedEvidenceSentence(mission, evidence, evaluation.context);
+    return generated !== null && evaluation.termsMatch
+      && evaluation.pairMatches && generated.length > 0;
+  });
+  if (!evidenceAttemptsAreStructured) return false;
   if (stage === 'folding') {
     return foldStepIndex >= 0 && foldStepIndex < 5
       && hasNoReviewData(diagnosis, repair, evidence);
@@ -360,8 +380,28 @@ const isReachableProgress = (
       return false;
     }
     if (stage === 'complete') {
-      return evidence !== null && attempts.evidence.length > 0
-        && completedMissionIds.includes(missionId);
+      if (evidence === null || attempts.evidence.length === 0
+        || !completedMissionIds.includes(missionId)) return false;
+      const currentEvidence = {
+        ...(evidence.oppositePair === undefined ? {} : { oppositePair: evidence.oppositePair }),
+        selectedTerms: evidence.selectedTerms,
+        completedSentence: expectedEvidenceSentence(mission, {
+          ...evidence,
+          completedSentence: '',
+        }, evaluateEvidenceSubmission(mission, {
+          ...evidence,
+          completedSentence: '',
+        }, {
+          baseFaceId: prediction.baseFaceId,
+          diagnosis,
+          repair,
+        }).context) ?? '',
+      };
+      return evaluateEvidenceSubmission(mission, currentEvidence, {
+        baseFaceId: prediction.baseFaceId,
+        diagnosis,
+        repair,
+      }).isCorrect;
     }
     return true;
   }

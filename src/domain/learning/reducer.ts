@@ -1,6 +1,7 @@
 import { getMissionById } from '../../content/missions/catalog';
 import { evaluateDiagnosis } from './diagnosis';
 import { verifyRepairSubmission, RepairValidationError } from './repairValidation';
+import { evaluateEvidenceSubmission, normalizeEvidenceSubmission } from './evidence';
 import type {
   AxisDirection,
   FaceId,
@@ -20,7 +21,6 @@ const FOLD_STEP_COUNT = 5;
 const FOLD_DIRECTIONS = ['north', 'east', 'south', 'west'] as const;
 const AXIS_DIRECTIONS: readonly AxisDirection[] = ['+x', '-x', '+y', '-y', '+z', '-z'];
 const DIAGNOSIS_TYPES = ['overlap', 'missing-face', 'decoration-direction'] as const;
-const GEOMETRY_TERMS = ['맞은편', '모서리', '면', '접는 방향', '겹침', '빈 면'] as const;
 const FACE_IDS: readonly FaceId[] = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6'];
 export class LearningTransitionError extends Error {
   readonly actionType: LearningAction['type'];
@@ -109,14 +109,6 @@ const cloneRepair = (repair: RepairSubmission): RepairSubmission => Object.freez
   ...(repair.submittedAtIso === undefined ? {} : { submittedAtIso: repair.submittedAtIso }),
 });
 
-const cloneEvidence = (evidence: EvidenceSubmission): EvidenceSubmission => Object.freeze({
-  ...(evidence.oppositePair === undefined ? {} : {
-    oppositePair: Object.freeze({ ...evidence.oppositePair }),
-  }),
-  selectedTerms: freezeArray(evidence.selectedTerms),
-  completedSentence: evidence.completedSentence,
-});
-
 const emptyAttempts = (): LearningAttempts => Object.freeze({
   predictions: freezeArray([]),
   diagnoses: freezeArray([]),
@@ -183,9 +175,6 @@ const isFoldDirection = (value: unknown): value is typeof FOLD_DIRECTIONS[number
 );
 const isAxisDirection = (value: unknown): value is AxisDirection => (
   AXIS_DIRECTIONS.includes(value as AxisDirection)
-);
-const isGeometryTerm = (value: unknown): value is typeof GEOMETRY_TERMS[number] => (
-  GEOMETRY_TERMS.includes(value as typeof GEOMETRY_TERMS[number])
 );
 
 const sameFaceSet = (left: readonly FaceId[], right: readonly FaceId[]): boolean => (
@@ -263,27 +252,6 @@ const validateDiagnosis = (
     throw transitionError(state, action, 'The missing direction is invalid');
   }
   return cloneDiagnosis(value);
-};
-
-const validateEvidence = (
-  state: LearningState,
-  action: Extract<LearningAction, { readonly type: 'SUBMIT_EVIDENCE' }>,
-): EvidenceSubmission => {
-  const value = action.evidence;
-  if (!value || !Array.isArray(value.selectedTerms)
-    || value.selectedTerms.length === 0
-    || !value.selectedTerms.every(isGeometryTerm)
-    || new Set(value.selectedTerms).size !== value.selectedTerms.length
-    || typeof value.completedSentence !== 'string'
-    || value.completedSentence.trim().length === 0) {
-    throw transitionError(state, action, 'The evidence sentence is incomplete');
-  }
-  if (value.oppositePair !== undefined
-    && (!isFaceId(value.oppositePair.a) || !isFaceId(value.oppositePair.b)
-      || value.oppositePair.a === value.oppositePair.b)) {
-    throw transitionError(state, action, 'The opposite pair is invalid');
-  }
-  return cloneEvidence(value);
 };
 
 const appendPrediction = (state: LearningState, prediction: PredictionRecord): LearningAttempts => ({
@@ -422,7 +390,15 @@ export const learningReducer = (
     case 'SUBMIT_EVIDENCE': {
       assertActiveStage(state, action, 'evidence');
       assertMissionScope(state, action);
-      const evidence = validateEvidence(state, action);
+      const mission = missionFor(state, action);
+      const evidence = normalizeEvidenceSubmission(mission, action.evidence, {
+        baseFaceId: state.prediction?.baseFaceId,
+        diagnosis: state.diagnosis,
+        repair: state.repair,
+      });
+      if (evidence === null) {
+        throw transitionError(state, action, 'The evidence must be a generated, mission-valid sentence');
+      }
       return freezeState({
         ...state,
         stage: 'evidence',
@@ -439,6 +415,15 @@ export const learningReducer = (
       assertActiveStage(state, action, 'evidence');
       if (state.evidence === null) {
         throw transitionError(state, action, 'Evidence is required before completion');
+      }
+      const mission = missionFor(state, action);
+      const evidenceEvaluation = evaluateEvidenceSubmission(mission, state.evidence, {
+        baseFaceId: state.prediction?.baseFaceId,
+        diagnosis: state.diagnosis,
+        repair: state.repair,
+      });
+      if (!evidenceEvaluation.isCorrect) {
+        throw transitionError(state, action, 'Correct structured evidence is required before completion');
       }
       const completedMissionIds = state.completedMissionIds.includes(state.missionId)
         ? state.completedMissionIds

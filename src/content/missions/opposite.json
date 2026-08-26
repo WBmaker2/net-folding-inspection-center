@@ -27,7 +27,7 @@
       { "level": 3, "focus": "compare-candidates", "text": "후보 두 면 중 기준면과 반대 방향을 가리키는 면을 고르고, 나머지 후보와 근거를 비교해 보세요." }
     ],
     "sentenceFrame": {
-      "template": "{firstFace}와 {secondFace}는 {term1}을 따라 접으면 서로 {term2}이 됩니다.",
+      "template": "{firstFace}와 {secondFace}는 {term1}을 따라가면 서로 {term2}이 됩니다.",
       "placeholders": ["firstFace", "secondFace", "term1", "term2"]
     },
     "targetVocabulary": ["맞은편", "면", "모서리", "접는 방향"]

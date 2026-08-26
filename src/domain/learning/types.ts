@@ -164,6 +164,16 @@ export interface EvidenceSubmission {
   readonly completedSentence: string;
 }
 
+export type AchievementStatus = 'confirmed' | 'practicing';
+
+export interface AchievementEvidence {
+  readonly prediction: AchievementStatus;
+  readonly analysis: AchievementStatus;
+  readonly repair: AchievementStatus;
+  readonly expression: AchievementStatus;
+  readonly isComplete: boolean;
+}
+
 /**
  * PredictionRecord 자체가 시도 하나입니다. 별도 점수·정오 필드를 만들지
  * 않으면 첫 오답도 수정 전후 비교에 필요한 원본 그대로 남길 수 있습니다.

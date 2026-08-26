@@ -1,0 +1,117 @@
+.evidence-screen,
+.completion-screen {
+  width: min(100%, 52rem);
+}
+
+.evidence-fieldset,
+.evidence-preview,
+.completion-comparison,
+.achievement-table {
+  margin: 1.25rem 0;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: var(--surface);
+}
+
+.evidence-face-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-top: 0.7rem;
+}
+
+.evidence-face-options button,
+.evidence-submit,
+.evidence-complete,
+.completion-actions button {
+  min-height: 2.8rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  color: var(--ink);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.evidence-face-options button.is-selected,
+.completion-actions button.gi-pulse,
+.evidence-submit:not(:disabled),
+.evidence-complete {
+  border-color: var(--accent);
+  background: var(--accent-soft, #e2f2f3);
+}
+
+.evidence-fieldset label,
+.evidence-fieldset select {
+  display: block;
+  width: 100%;
+  margin-top: 0.55rem;
+}
+
+.evidence-fieldset select {
+  min-height: 2.6rem;
+  padding: 0.45rem;
+  border: 1px solid var(--line);
+  border-radius: 0.55rem;
+  background: var(--surface);
+}
+
+.evidence-preview p {
+  margin-bottom: 0;
+  font-weight: 700;
+}
+
+.evidence-submit,
+.evidence-complete {
+  margin: 0.35rem 0.4rem 0.35rem 0;
+}
+
+.evidence-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.achievement-table,
+.completion-comparison table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.achievement-table th,
+.achievement-table td,
+.completion-comparison th,
+.completion-comparison td {
+  padding: 0.6rem;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.achievement-table tr:last-child th,
+.achievement-table tr:last-child td,
+.completion-comparison tr:last-child th,
+.completion-comparison tr:last-child td {
+  border-bottom: 0;
+}
+
+.completion-comparison {
+  overflow-x: auto;
+}
+
+.completion-comparison table {
+  min-width: 38rem;
+}
+
+.completion-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 520px) {
+  .evidence-face-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
