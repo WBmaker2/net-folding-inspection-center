@@ -10,6 +10,7 @@ import {
   expectOnePulse,
   selectMission,
 } from './helpers/learner-flow';
+import { completeCollisionWithKeyboard } from './helpers/keyboard-flow';
 
 async function expectA11y(page: Parameters<typeof test>[0]['page']): Promise<void> {
   const result = await new AxeBuilder({ page }).analyze();
@@ -30,19 +31,12 @@ test('업데이트 dialog Escape가 opener에 초점을 돌려준다', async ({ 
   await expect(trigger).toBeFocused();
 });
 
-test('전개도 면은 화살표 키와 Enter로 선택할 수 있다', async ({ page }) => {
+test('마우스 없이 Tab·화살표·Space·Enter로 충돌 수리 미션을 완료한다', async ({ page }) => {
   await page.goto('/');
-  await page.keyboard.press('Tab');
-  await expect(page.getByRole('button', { name: /면 위치 추적 1 미션 선택/ })).toBeFocused();
-  await page.keyboard.press('Enter');
-  await expect(page.getByRole('heading', { name: '예측판' })).toBeVisible();
-  const firstFace = page.getByRole('button', { name: /^1번 면/ }).first();
-  await firstFace.focus();
-  await firstFace.press('Enter');
-  await expect(page.getByText('기준면: 1번 면')).toBeVisible();
-  await firstFace.press('ArrowUp');
-  await page.getByRole('region', { name: '예상 윗면을 골라 보세요' }).getByRole('button', { name: /^2번 면/ }).press('Enter');
-  await expect(page.getByText(/예상 윗면: 2번 면/)).toBeVisible();
+  await expectOnePulse(page, /면 위치 추적 1 미션 선택/);
+  await completeCollisionWithKeyboard(page);
+  await expectOnePulse(page, /다음 미션/);
+  await page.screenshot({ path: 'docs/qa/evidence/keyboard-complete.png', fullPage: true });
 });
 
 test('접기 live region, repair Escape reset, 대표 화면 axe 검사를 확인한다', async ({ page }) => {
@@ -75,6 +69,7 @@ test('reduced motion은 pseudo-element pulse를 끄고 outline을 남긴다', as
   expect(state.content).not.toBe('none');
   expect(state.animationName).toBe('none');
   expect(state.outlineWidth).toBe('3px');
+  await page.screenshot({ path: 'docs/qa/evidence/reduced-motion.png', fullPage: true });
 });
 
 test('forced colors에서도 색상 외 면 번호·무늬 접근성 이름을 유지한다', async ({ page }) => {
@@ -83,18 +78,29 @@ test('forced colors에서도 색상 외 면 번호·무늬 접근성 이름을 �
   await selectMission(page, 'cube-track-01');
   await expect(page.getByRole('button', { name: /^1번 면, 파란색, 원형/ }).first()).toBeVisible();
   await expectA11y(page);
+  await page.screenshot({ path: 'docs/qa/evidence/forced-colors.png', fullPage: true });
 });
 
-test('대표 접수·예측·접기·진단·근거·완료 화면의 심각 axe 위반은 0개다', async ({ page }) => {
+test('각 단계 heading이 존재하는 동안 심각 axe 위반은 0개다', async ({ page }) => {
   await page.goto('/');
+  await expect(page.getByRole('heading', { name: '검수 접수' })).toBeVisible();
   await expectA11y(page);
-  await selectMission(page, 'cube-track-01');
+  await selectMission(page, 'cube-collision-01');
+  await expect(page.getByRole('heading', { name: '예측판' })).toBeVisible();
   await expectA11y(page);
-  await completePrediction(page, 3);
+  await completePrediction(page, 2);
+  await expect(page.getByRole('heading', { name: '한 면씩 접기' })).toBeVisible();
   await expectA11y(page);
   await completeFolding(page);
-  await completeDiagnosis(page, 'tracking');
+  await expect(page.getByRole('heading', { name: '접힌 결과 진단하기' })).toBeVisible();
   await expectA11y(page);
-  await completeEvidence(page, 'tracking');
+  await completeDiagnosis(page, 'collision');
+  await expect(page.getByRole('heading', { name: '한 면 수리대' })).toBeVisible();
+  await expectA11y(page);
+  await completeRepair(page);
+  await expect(page.getByRole('heading', { name: '근거 문장 만들기' })).toBeVisible();
+  await expectA11y(page);
+  await completeEvidence(page, 'collision');
+  await expect(page.getByRole('heading', { name: '검수 완료' })).toBeVisible();
   await expectA11y(page);
 });

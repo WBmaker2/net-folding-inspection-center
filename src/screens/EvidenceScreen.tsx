@@ -68,6 +68,27 @@ export function EvidenceScreen({
     }
     return context.pairCandidates;
   }, [context.collisionPair, context.pairCandidates, mission.kind]);
+  const termOptions = terms.filter((term) => mission.targetVocabulary.includes(term));
+  const updateTerm = (setter: (term: GeometryTerm | '') => void, value: GeometryTerm | ''): void => {
+    setter(value);
+    setSubmitted(null);
+    setCompleted(false);
+    setSubmitError('');
+  };
+  const handleTermKeyDown = (
+    event: React.KeyboardEvent<HTMLSelectElement>,
+    current: GeometryTerm | '',
+    setter: (term: GeometryTerm | '') => void,
+  ): void => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    event.preventDefault();
+    const currentIndex = current === '' ? -1 : termOptions.indexOf(current);
+    const nextIndex = Math.max(-1, Math.min(
+      termOptions.length - 1,
+      currentIndex + (event.key === 'ArrowDown' ? 1 : -1),
+    ));
+    updateTerm(setter, nextIndex < 0 ? '' : termOptions[nextIndex]!);
+  };
   const selectedPair = selectedFaces.length === 2
     ? pairOptions.find((pair) => (
       (pair.a === selectedFaces[0] && pair.b === selectedFaces[1])
@@ -173,10 +194,11 @@ export function EvidenceScreen({
         <select
           id="evidence-term-relationship"
           value={relationshipTerm}
-          onChange={(event) => { setRelationshipTerm(event.target.value as GeometryTerm); setSubmitted(null); setCompleted(false); setSubmitError(''); }}
+          onKeyDown={(event) => handleTermKeyDown(event, relationshipTerm, setRelationshipTerm)}
+          onChange={(event) => updateTerm(setRelationshipTerm, event.target.value as GeometryTerm)}
         >
           <option value="">고르기</option>
-          {terms.filter((term) => mission.targetVocabulary.includes(term)).map((term) => (
+          {termOptions.map((term) => (
             <option value={term} key={term}>{term}</option>
           ))}
         </select>
@@ -184,10 +206,11 @@ export function EvidenceScreen({
         <select
           id="evidence-term-path"
           value={pathTerm}
-          onChange={(event) => { setPathTerm(event.target.value as GeometryTerm); setSubmitted(null); setCompleted(false); setSubmitError(''); }}
+          onKeyDown={(event) => handleTermKeyDown(event, pathTerm, setPathTerm)}
+          onChange={(event) => updateTerm(setPathTerm, event.target.value as GeometryTerm)}
         >
           <option value="">고르기</option>
-          {terms.filter((term) => mission.targetVocabulary.includes(term)).map((term) => (
+          {termOptions.map((term) => (
             <option value={term} key={term}>{term}</option>
           ))}
         </select>

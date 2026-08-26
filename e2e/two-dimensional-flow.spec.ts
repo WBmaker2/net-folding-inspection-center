@@ -4,6 +4,7 @@ import {
   completeEvidence,
   completePrediction,
   completeRepair,
+  expectOnePulse,
   selectMission,
   type MissionId,
 } from './helpers/learner-flow';
@@ -30,11 +31,18 @@ for (const mission of missions) {
     await page.goto('/');
     await selectMission(page, mission.id);
     await completePrediction(page, mission.top);
+    await expectOnePulse(page, /다음 면 접기/);
     await page.getByRole('button', { name: '다음 면 접기' }).click();
     await expect(page.locator('canvas')).toHaveCount(0);
     await expect(page.getByText('3D 보기를 사용할 수 없어 2D 관계 보기를 유지합니다.')).toBeVisible();
     await expect(page.getByRole('table', { name: '완성된 면 관계' })).toBeVisible();
-    for (let step = 1; step < 5; step += 1) await page.getByRole('button', { name: '다음 면 접기' }).click();
+    if (mission.id === 'cube-track-01') {
+      await page.screenshot({ path: 'docs/qa/evidence/webgl-disabled.png', fullPage: true });
+    }
+    for (let step = 1; step < 5; step += 1) {
+      await expectOnePulse(page, /다음 면 접기/);
+      await page.getByRole('button', { name: '다음 면 접기' }).click();
+    }
     if (mission.kind !== 'opposite') await completeDiagnosis(page, mission.kind);
     if (mission.kind === 'collision' || mission.kind === 'repair') await completeRepair(page);
     await completeEvidence(page, mission.kind);

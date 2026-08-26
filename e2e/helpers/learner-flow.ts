@@ -34,9 +34,18 @@ export async function selectMission(page: Page, missionId: MissionId): Promise<v
 }
 
 export async function completePrediction(page: Page, topFaceNumber: number): Promise<void> {
-  await expect(page.getByRole('button', { name: '예측을 남기고 접기실로' })).toBeDisabled();
+  const predictionSubmit = page.getByRole('button', { name: '예측을 남기고 접기실로' });
+  await expect(predictionSubmit).toBeDisabled();
   await expect(page.getByRole('heading', { name: '한 면씩 접기' })).toHaveCount(0);
   await expect(page.locator('canvas')).toHaveCount(0);
+  await expect(page.getByRole('table', { name: '완성된 면 관계' })).toHaveCount(0);
+  await expect(page.locator('.cube-fold-viewer')).toHaveCount(0);
+  await expect(page.getByText('3D 보기를 사용할 수 없어 2D 관계 보기를 유지합니다.')).toHaveCount(0);
+  await expect(page.getByText('접힌 결과 진단하기')).toHaveCount(0);
+  await expect(page.getByText('한 면 수리대')).toHaveCount(0);
+  await expect(page.getByText('근거 문장 만들기')).toHaveCount(0);
+  await expect(page.getByText('검수 완료')).toHaveCount(0);
+  await expect(page.getByText(/정답:|실제 방향:|전개도 검사:/)).toHaveCount(0);
   await faceButton(page, 1, 0).click();
   await faceButton(page, topFaceNumber, 1).click();
   const orderNumbers = [2, 3, 4, 5, 6];
@@ -46,9 +55,9 @@ export async function completePrediction(page: Page, topFaceNumber: number): Pro
   for (const number of orderNumbers) {
     await page.getByRole('button', { name: new RegExp(`${number}번 면의 북쪽 방향`) }).click();
   }
-  await expect(page.getByRole('button', { name: '예측을 남기고 접기실로' })).toBeEnabled();
+  await expect(predictionSubmit).toBeEnabled();
   await expectOnePulse(page, /예측을 남기고 접기실로/);
-  await page.getByRole('button', { name: '예측을 남기고 접기실로' }).click();
+  await predictionSubmit.click();
   await expect(page.getByRole('heading', { name: '한 면씩 접기' })).toBeVisible();
 }
 
@@ -116,4 +125,5 @@ export async function completeEvidence(page: Page, kind: MissionKind): Promise<v
   await expectOnePulse(page, /미션 완료 확인/);
   await page.getByRole('button', { name: '미션 완료 확인' }).click();
   await expect(page.getByRole('heading', { name: '검수 완료' })).toBeVisible();
+  await expectOnePulse(page, /다음 미션/);
 }
