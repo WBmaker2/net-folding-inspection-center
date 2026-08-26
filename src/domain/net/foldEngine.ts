@@ -116,33 +116,26 @@ const copyFrameMap = (
   selectedFaceIds?: readonly FaceId[],
 ): ReadonlyMap<FaceId, FaceFrame> => {
   const selected = selectedFaceIds === undefined ? undefined : new Set(selectedFaceIds);
-  const copied = new Map<FaceId, FaceFrame>();
+  const copied: [FaceId, FaceFrame][] = [];
   for (const [faceId, frame] of frames) {
     if (selected === undefined || selected.has(faceId)) {
-      copied.set(faceId, freezeFrame(frame));
+      copied.push([faceId, freezeFrame(frame)]);
     }
   }
-  Object.defineProperties(copied, {
-    set: {
-      configurable: false,
-      value: () => {
-        throw new TypeError('Fold frame maps are immutable');
-      },
-    },
-    delete: {
-      configurable: false,
-      value: () => {
-        throw new TypeError('Fold frame maps are immutable');
-      },
-    },
-    clear: {
-      configurable: false,
-      value: () => {
-        throw new TypeError('Fold frame maps are immutable');
-      },
-    },
-  });
-  return Object.freeze(copied);
+  const backing = new Map(copied);
+  const facade: ReadonlyMap<FaceId, FaceFrame> = {
+    get size() { return backing.size; },
+    get: (key) => backing.get(key),
+    has: (key) => backing.has(key),
+    entries: () => backing.entries(),
+    keys: () => backing.keys(),
+    values: () => backing.values(),
+    forEach: (callback, thisArg) => backing.forEach(
+      (value, key) => callback.call(thisArg, value, key, facade),
+    ),
+    [Symbol.iterator]: () => backing[Symbol.iterator](),
+  };
+  return Object.freeze(facade);
 };
 
 const createSnapshot = (
@@ -251,23 +244,27 @@ export const createFoldSequence = (
       );
     }
 
-    const hingeEdge = settledOrder
+    const hingeEdges = settledOrder
       .flatMap((hingeFaceId) => adjacency.get(hingeFaceId) ?? [])
-      .find((edge) => edge.neighborFaceId === movingFaceId);
+      .filter((edge) => edge.neighborFaceId === movingFaceId);
     const endFrame = computation.frames.get(movingFaceId);
-    if (hingeEdge === undefined || endFrame === undefined) {
+    if (hingeEdges.length === 0 || endFrame === undefined) {
       throw new InvalidFoldOrderError(
         `Face ${movingFaceId} does not share an edge with a settled face at step ${orderIndex + 1}`,
         { movingFaceId, stepIndex: orderIndex + 1, settledFaceIds: settledOrder },
       );
     }
-    const hingeFrame = computation.frames.get(hingeEdge.faceId);
-    if (hingeFrame === undefined) {
+    const hingeMatch = hingeEdges
+      .map((edge) => ({ edge, frame: computation.frames.get(edge.faceId) }))
+      .find(({ edge, frame }) => frame !== undefined
+        && framesEqual(foldAcross(frame, edge.direction), endFrame));
+    if (hingeMatch === undefined) {
       throw new InvalidFoldOrderError(
-        `Hinge face ${hingeEdge.faceId} has no computed frame`,
+        `No settled hinge can produce the computed frame for ${movingFaceId} at step ${orderIndex + 1}`,
         { movingFaceId, stepIndex: orderIndex + 1, settledFaceIds: settledOrder },
       );
     }
+    const { edge: hingeEdge } = hingeMatch;
 
     steps.push(Object.freeze({
       index: orderIndex + 1,
@@ -275,8 +272,6 @@ export const createFoldSequence = (
       hingeFaceId: hingeEdge.faceId,
       direction: hingeEdge.direction,
       angleDegrees: 90 as const,
-      startFrame: freezeFrame(hingeFrame),
-      endFrame: freezeFrame(endFrame),
     }));
     settledOrder.push(movingFaceId);
     seen.add(movingFaceId);

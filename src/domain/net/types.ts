@@ -51,8 +51,6 @@ export interface FoldStep {
   readonly hingeFaceId: FaceId;
   readonly direction: FoldDirection;
   readonly angleDegrees: 90;
-  readonly startFrame: FaceFrame;
-  readonly endFrame: FaceFrame;
 }
 
 export interface FoldSnapshot {

@@ -5,6 +5,7 @@ import {
   createFoldSequence,
   getFoldSnapshot,
   getOppositePairs,
+  InvalidFoldOrderError,
 } from '../../src/domain/net/foldEngine';
 import type { FaceDefinition, FaceFrame, NetDefinition } from '../../src/domain/net/types';
 
@@ -25,6 +26,15 @@ const canonicalValidNet = net(
   face('F4', 1, 3),
   face('F5', 0, 2),
   face('F6', 2, 2),
+);
+
+const collisionNet = net(
+  face('F1', 1, 2),
+  face('F2', 1, 1),
+  face('F3', 1, 0),
+  face('F4', 1, 3),
+  face('F5', 0, 2),
+  face('F6', 0, 1),
 );
 
 describe('cube fold frame propagation', () => {
@@ -125,23 +135,68 @@ describe('cube fold frame propagation', () => {
       direction: 'north',
       angleDegrees: 90,
     });
-    expect(sequence.steps[0]?.startFrame).toBeDefined();
-    expect(sequence.steps[0]?.endFrame).toEqual(
-      computeFaceFrames(canonicalValidNet, 'F1').frames.get('F2'),
-    );
-
     expect(sequence.snapshots).toHaveLength(6);
     expect(getFoldSnapshot(sequence, 0).settledFaceIds).toEqual(['F1']);
     expect(getFoldSnapshot(sequence, 5).settledFaceIds).toHaveLength(6);
-    expect(getFoldSnapshot(sequence, 5).frames).toEqual(
-      computeFaceFrames(canonicalValidNet, 'F1').frames,
+    expect([...getFoldSnapshot(sequence, 5).frames.entries()]).toEqual(
+      [...computeFaceFrames(canonicalValidNet, 'F1').frames.entries()],
     );
     expect(getFoldSnapshot(sequence, 0).frames).not.toBe(getFoldSnapshot(sequence, 1).frames);
+    expect(sequence.snapshots.map((snapshot) => snapshot.settledFaceIds.length)).toEqual([
+      1, 2, 3, 4, 5, 6,
+    ]);
+    expect(Object.isFrozen(sequence.snapshots)).toBe(true);
+    expect(Object.isFrozen(getFoldSnapshot(sequence, 1).frames)).toBe(true);
+    expect(() => Map.prototype.set.call(getFoldSnapshot(sequence, 1).frames, 'F6', {
+      normal: [0, 0, 1], right: [1, 0, 0], down: [0, 1, 0], center: [0, 0, 1],
+    })).toThrow(TypeError);
   });
 
   it('rejects a requested fold that does not share an edge with settled faces', () => {
     expect(() => createFoldSequence(canonicalValidNet, 'F1', [
       'F3', 'F2', 'F5', 'F6', 'F4',
-    ])).toThrowError('F3');
+    ] as const)).toThrow(InvalidFoldOrderError);
+  });
+
+  it.each([
+    { label: 'empty', order: [] as const },
+    { label: 'short', order: ['F2', 'F3', 'F5', 'F6'] as const },
+    { label: 'long', order: ['F2', 'F3', 'F5', 'F6', 'F4', 'F1'] as const },
+  ])('rejects a requested fold order with length ($label)', ({ order }) => {
+    expect(() => createFoldSequence(canonicalValidNet, 'F1', order))
+      .toThrow(InvalidFoldOrderError);
+  });
+
+  it.each([
+    { label: 'duplicate', order: ['F2', 'F2', 'F3', 'F5', 'F6'] as const },
+    { label: 'base reappearance', order: ['F2', 'F1', 'F3', 'F5', 'F6'] as const },
+  ])('rejects duplicate or reappearing base faces: $label', ({ order }) => {
+    expect(() => createFoldSequence(canonicalValidNet, 'F1', order))
+      .toThrow(InvalidFoldOrderError);
+  });
+
+  it('chooses a settled hinge whose proposal matches the authoritative final frame', () => {
+    const sequence = createFoldSequence(collisionNet, 'F1', [
+      'F2', 'F5', 'F6', 'F3', 'F4',
+    ]);
+
+    expect(sequence.steps[2]).toMatchObject({
+      movingFaceId: 'F6',
+      hingeFaceId: 'F5',
+      direction: 'north',
+    });
+  });
+
+  it('rejects a cyclic step when no settled hinge can produce the final frame', () => {
+    expect(() => createFoldSequence(collisionNet, 'F1', [
+      'F2', 'F6', 'F5', 'F3', 'F4',
+    ])).toThrow(InvalidFoldOrderError);
+  });
+
+  it.each([-1, 1.5, 6])('rejects fold snapshot index %s', (stepIndex) => {
+    const sequence = createFoldSequence(canonicalValidNet, 'F1', [
+      'F2', 'F3', 'F5', 'F6', 'F4',
+    ]);
+    expect(() => getFoldSnapshot(sequence, stepIndex)).toThrow(RangeError);
   });
 });

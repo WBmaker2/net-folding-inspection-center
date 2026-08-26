@@ -36,12 +36,17 @@ describe('decoration orientation checks', () => {
       down: [0, -1, 0],
       center: [0, 0, -1],
     };
-    const decoratedFace = face('F3', 1, 0, 1);
-
-    expect(evaluateDecorationOrientation(decoratedFace, frame, '+y')).toEqual({
-      worldUp: '+y',
-      targetWorldUp: '+y',
-      matchesTarget: true,
+    const expectedByQuarterTurn = ['-x', '+y', '+x', '-y'] as const;
+    expectedByQuarterTurn.forEach((expectedWorldUp, decorationQuarterTurn) => {
+      expect(evaluateDecorationOrientation(
+        face('F3', 1, 0, decorationQuarterTurn as 0 | 1 | 2 | 3),
+        frame,
+        expectedWorldUp,
+      )).toEqual({
+        worldUp: expectedWorldUp,
+        targetWorldUp: expectedWorldUp,
+        matchesTarget: true,
+      });
     });
     expect(evaluateDecorationOrientation(face('F3', 1, 0, 0), frame, '+y').matchesTarget)
       .toBe(false);
