@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NetGrid } from '../components/net2d/NetGrid';
+import { RepairTargetGrid } from '../components/net2d/RepairTargetGrid';
 import { faceNumber } from '../components/net2d/faceLabels';
 import { evaluateRepair, enumerateRepairTargets, moveFace, rotateFaceDecoration, type RepairEvaluation } from '../domain/learning/repair';
 import type { RepairSubmission, MissionDefinition } from '../domain/learning/types';
@@ -13,15 +14,12 @@ export interface RepairScreenProps {
   readonly baseFaceId?: FaceId;
   /** Optional name used by the controller when the repair starts from a derived net. */
   readonly originalNet?: NetDefinition;
-  readonly net?: NetDefinition;
-  readonly initialNet?: NetDefinition;
   readonly onSubmit: (repair: RepairSubmission) => void;
   readonly onRotateDecoration?: (faceId: FaceId, net: NetDefinition) => void;
   readonly now?: () => string;
 }
 
 const pointText = (point: GridPoint): string => `(${point.x}, ${point.y})`;
-const samePoint = (left: GridPoint, right: GridPoint): boolean => left.x === right.x && left.y === right.y;
 
 const reasonText = (evaluation: RepairEvaluation): string => {
   if (!evaluation.isSingleFaceMove) return '한 면의 위치만 바꾸어야 합니다. 다른 정보는 그대로 두세요.';
@@ -34,21 +32,24 @@ const reasonText = (evaluation: RepairEvaluation): string => {
   return '이동한 한 면이 연결을 유지하고, 접었을 때 겹치지 않습니다.';
 };
 
-export function RepairScreen({
+interface RepairScreenContentProps extends RepairScreenProps {
+  readonly repairNet: NetDefinition;
+}
+
+function RepairScreenContent({
   mission,
   baseFaceId,
-  originalNet,
-  net,
-  initialNet,
+  repairNet,
   onSubmit,
   onRotateDecoration,
   now = () => new Date().toISOString(),
-}: RepairScreenProps): React.JSX.Element {
+}: RepairScreenContentProps): React.JSX.Element {
   const headingRef = useFocusHeading<HTMLHeadingElement>();
-  const repairNet = originalNet ?? net ?? initialNet ?? mission.net;
+  const [decorationPreviewNet, setDecorationPreviewNet] = useState<NetDefinition>(repairNet);
   const [selectedFaceId, setSelectedFaceId] = useState<FaceId | null>(null);
   const [target, setTarget] = useState<GridPoint | null>(null);
   const [evaluation, setEvaluation] = useState<RepairEvaluation | null>(null);
+  const [candidateNet, setCandidateNet] = useState<NetDefinition | null>(null);
   const [status, setStatus] = useState('면을 먼저 선택한 뒤, 이동할 빈 칸을 선택하세요.');
   const [callbackError, setCallbackError] = useState(false);
 
@@ -75,6 +76,7 @@ export function RepairScreen({
     setSelectedFaceId(faceId);
     setTarget(null);
     setEvaluation(null);
+    setCandidateNet(null);
     setCallbackError(false);
     setStatus(`${faceNumber(repairNet.faces.find((face) => face.id === faceId) ?? repairNet.faces[0]!)}번 면을 골랐습니다. 이동할 빈 칸을 선택하세요.`);
   };
@@ -85,6 +87,7 @@ export function RepairScreen({
     const nextEvaluation = evaluateRepair(repairNet, candidate, baseFaceId ?? mission.baseFaceId);
     setTarget({ x: nextTarget.x, y: nextTarget.y });
     setEvaluation(nextEvaluation);
+    setCandidateNet(moveFace(decorationPreviewNet, selectedFaceId, nextTarget));
     setCallbackError(false);
     setStatus(`미리보기: ${pointText(nextTarget)}로 옮겼을 때의 결과를 확인하세요.`);
   };
@@ -110,7 +113,9 @@ export function RepairScreen({
 
   const rotate = (): void => {
     if (selectedFaceId === null) return;
-    const rotated = rotateFaceDecoration(repairNet, selectedFaceId);
+    const rotated = rotateFaceDecoration(decorationPreviewNet, selectedFaceId);
+    setDecorationPreviewNet(rotated);
+    if (target !== null) setCandidateNet(moveFace(rotated, selectedFaceId, target));
     onRotateDecoration?.(selectedFaceId, rotated);
     setStatus('장식 방향만 한 번 돌렸습니다. 장식 회전은 좌표 수리와 별도로 확인합니다.');
   };
@@ -120,19 +125,30 @@ export function RepairScreen({
       className="repair-screen"
       aria-labelledby="repair-title"
     >
-      <h1 id="repair-title" ref={headingRef}>한 면 수리대</h1>
+      <h1 id="repair-title" ref={headingRef} tabIndex={-1}>한 면 수리대</h1>
       <p className="repair-intro">면 선택 → 이동할 빈 칸 선택 → 미리보기 → 확인 순서로 진행합니다.</p>
       <p className="repair-status" role="status" aria-live="polite">{status}</p>
 
       <div className="repair-panel">
         <h2>원본 전개도</h2>
-        <NetGrid
-          net={repairNet}
-          mode="select-move-target"
-          selectedFaceId={selectedFaceId}
-          onFaceSelect={chooseFace}
-          label="수리할 면 선택"
-        />
+        <div className="repair-net-comparison">
+          <div>
+            <h3>원본</h3>
+            <NetGrid
+              net={decorationPreviewNet}
+              mode="select-move-target"
+              selectedFaceId={selectedFaceId}
+              onFaceSelect={chooseFace}
+              label="원본 전개도에서 수리할 면 선택"
+            />
+          </div>
+          {candidateNet !== null && (
+            <div>
+              <h3>수리 후보 미리보기</h3>
+              <NetGrid net={candidateNet} mode="inspect" label="수리 후보 전개도 미리보기" />
+            </div>
+          )}
+        </div>
         <p className="repair-hint">색뿐 아니라 면 번호와 무늬를 함께 살펴보세요.</p>
       </div>
 
@@ -143,22 +159,13 @@ export function RepairScreen({
         ) : targets.length === 0 ? (
           <p>연결을 유지하는 빈 칸이 없습니다.</p>
         ) : (
-          <div className="repair-targets" role="group" aria-label="이동 후보 선택">
-            {targets.map((candidate) => {
-              const selected = target !== null && samePoint(target, candidate);
-              return (
-                <button
-                  type="button"
-                  key={pointText(candidate)}
-                  className={`repair-target-button${selected ? ' is-selected' : ''}`}
-                  aria-pressed={selected}
-                  onClick={() => chooseTarget(candidate)}
-                >
-                  이동 후보 {pointText(candidate)}
-                </button>
-              );
-            })}
-          </div>
+          <RepairTargetGrid
+            net={decorationPreviewNet}
+            targets={targets}
+            selectedTarget={target}
+            onTargetSelect={chooseTarget}
+            label="이동 후보 빈 칸 격자"
+          />
         )}
       </div>
 
@@ -188,4 +195,12 @@ export function RepairScreen({
       )}
     </section>
   );
+}
+
+export function RepairScreen(props: RepairScreenProps): React.JSX.Element {
+  const repairNet = props.originalNet ?? props.mission.net;
+  const netKey = repairNet.faces
+    .map((face) => `${face.id}:${face.grid.x},${face.grid.y}:${face.decorationQuarterTurn}`)
+    .join('|');
+  return <RepairScreenContent key={netKey} {...props} repairNet={repairNet} />;
 }

@@ -23,6 +23,14 @@ const MISSION_IDS: readonly MissionId[] = [
   'cube-repair-01', 'cube-repair-02',
 ];
 const FACE_IDS: readonly FaceId[] = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6'];
+const FACE_STYLES: Readonly<Record<FaceId, { readonly colorToken: string; readonly symbol: string }>> = {
+  F1: { colorToken: 'blue', symbol: 'circle' },
+  F2: { colorToken: 'yellow', symbol: 'square' },
+  F3: { colorToken: 'green', symbol: 'triangle' },
+  F4: { colorToken: 'coral', symbol: 'star' },
+  F5: { colorToken: 'purple', symbol: 'diamond' },
+  F6: { colorToken: 'teal', symbol: 'cross' },
+};
 const FOLD_DIRECTIONS: readonly FoldDirection[] = ['north', 'east', 'south', 'west'];
 const AXIS_DIRECTIONS: readonly AxisDirection[] = ['+x', '-x', '+y', '-y', '+z', '-z'];
 const DIAGNOSIS_TYPES = ['overlap', 'missing-face', 'decoration-direction'] as const;
@@ -139,7 +147,8 @@ const sanitizeDiagnosis = (value: unknown): DiagnosisSubmission | null => {
 const sanitizeFace = (value: unknown): RecordValue | null => {
   const turn = isRecord(value) ? value.decorationQuarterTurn : undefined;
   if (!isRecord(value) || !isFaceId(value.id) || !integerPoint(value.grid)
-    || typeof value.colorToken !== 'string' || typeof value.symbol !== 'string'
+    || value.colorToken !== FACE_STYLES[value.id].colorToken
+    || value.symbol !== FACE_STYLES[value.id].symbol
     || typeof turn !== 'number' || !Number.isInteger(turn)
     || turn < 0 || turn > 3) return null;
   return {

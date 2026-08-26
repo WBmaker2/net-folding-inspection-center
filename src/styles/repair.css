@@ -29,6 +29,68 @@
   gap: 0.6rem;
 }
 
+.repair-net-comparison {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.repair-net-comparison h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.repair-target-grid {
+  display: grid;
+  width: max-content;
+  min-width: min(100%, 18rem);
+  gap: 0.35rem;
+  margin-inline: auto;
+}
+
+.repair-grid-cell {
+  min-width: 4rem;
+  min-height: 4rem;
+}
+
+.repair-grid-empty {
+  border: 1px dashed transparent;
+}
+
+.repair-grid-occupied .face-tile {
+  cursor: default;
+}
+
+.repair-target-cell {
+  display: grid;
+  width: 100%;
+  min-height: 4rem;
+  place-items: center;
+  gap: 0.15rem;
+  padding: 0.25rem;
+  border: 2px dashed var(--accent);
+  border-radius: 0.6rem;
+  color: var(--ink);
+  background: var(--accent-soft);
+  cursor: pointer;
+}
+
+.repair-target-cell span {
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.repair-target-cell strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.repair-target-cell.is-selected,
+.repair-target-cell:focus-visible {
+  border-style: solid;
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .repair-target-button,
 .repair-rotate-button,
 .repair-confirm-button {
@@ -93,6 +155,10 @@
 }
 
 @media (max-width: 520px) {
+  .repair-net-comparison {
+    grid-template-columns: 1fr;
+  }
+
   .repair-coordinate-list > div {
     align-items: flex-start;
     flex-direction: column;

@@ -1,4 +1,5 @@
 import {
+  canonicalizeNet,
   evaluateRepair,
   type RepairEvaluation,
 } from './repair';
@@ -11,13 +12,6 @@ const isPoint = (value: unknown): value is GridPoint => (
   typeof value === 'object' && value !== null
   && Number.isSafeInteger((value as GridPoint).x)
   && Number.isSafeInteger((value as GridPoint).y)
-);
-const isCandidate = (value: unknown): value is NetDefinition => (
-  typeof value === 'object' && value !== null
-  && Array.isArray((value as NetDefinition).faces)
-  && (value as NetDefinition).faces.every((face) => (
-    typeof face === 'object' && face !== null && isFaceId(face.id) && isPoint(face.grid)
-  ))
 );
 const samePoint = (left: GridPoint, right: GridPoint): boolean => (
   left.x === right.x && left.y === right.y
@@ -44,11 +38,12 @@ export const verifyRepairSubmission = (
   if (typeof value !== 'object' || value === null || !isFaceId((value as RepairSubmission).faceId)
     || !isPoint((value as RepairSubmission).target)
     || typeof (value as RepairSubmission).accepted !== 'boolean'
-    || !isCandidate((value as RepairSubmission).candidate)) {
+    || canonicalizeNet((value as RepairSubmission).candidate) === null) {
     throw new RepairValidationError('A repair must include a candidate net and an acceptance flag');
   }
   const submission = value as RepairSubmission;
-  const candidate = submission.candidate;
+  const candidate = canonicalizeNet(submission.candidate)!;
+  const normalizedSubmission: RepairSubmission = { ...submission, candidate };
   const evaluation = evaluateRepair(original, candidate, baseFaceId);
   if (!evaluation.isSingleFaceMove || evaluation.changedFaceIds.length !== 1
     || evaluation.changedFaceIds[0] !== submission.faceId) {
@@ -61,5 +56,5 @@ export const verifyRepairSubmission = (
   if (submission.accepted !== evaluation.accepted) {
     throw new RepairValidationError('The acceptance flag does not match the repair evaluation');
   }
-  return { submission, evaluation };
+  return { submission: normalizedSubmission, evaluation };
 };

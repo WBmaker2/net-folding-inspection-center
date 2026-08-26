@@ -99,8 +99,11 @@ const cloneRepair = (repair: RepairSubmission): RepairSubmission => Object.freez
   accepted: repair.accepted,
   candidate: Object.freeze({
     faces: freezeArray(repair.candidate.faces.map((face) => Object.freeze({
-      ...face,
+      id: face.id,
       grid: freezePoint(face.grid),
+      colorToken: face.colorToken,
+      symbol: face.symbol,
+      decorationQuarterTurn: face.decorationQuarterTurn,
     }))),
   }),
   ...(repair.submittedAtIso === undefined ? {} : { submittedAtIso: repair.submittedAtIso }),

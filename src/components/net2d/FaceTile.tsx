@@ -68,6 +68,10 @@ export function FaceTile({
         className="face-tile-symbol"
         viewBox="0 0 48 48"
         aria-hidden="true"
+        style={{
+          transform: `rotate(${face.decorationQuarterTurn * 90}deg)`,
+          transformOrigin: '50% 50%',
+        }}
       >
         <FacePattern face={face} />
       </svg>

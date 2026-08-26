@@ -412,6 +412,7 @@ describe('progress storage', () => {
     })).toBeNull();
   });
 
+
   it('requires complete evidence to have a matching evidence attempt', () => {
     const complete = learningReducer(collisionEvidenceState(), {
       type: 'COMPLETE_MISSION',
