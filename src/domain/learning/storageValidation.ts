@@ -253,6 +253,15 @@ const matchesLastAttempt = <T>(current: T | null, attempts: readonly T[]): boole
   || (attempts.length > 0 && structurallyEqual(current, attempts[attempts.length - 1]))
 );
 
+/** A cleared current value is valid only while the next submission is pending. */
+const matchesCurrentAttempt = <T>(
+  current: T | null,
+  attempts: readonly T[],
+  required: boolean,
+): boolean => current === null
+  ? !required
+  : matchesLastAttempt(current, attempts);
+
 const isReachableProgress = (
   missionId: MissionId | null,
   stage: PersistedProgress['stage'],
@@ -282,12 +291,17 @@ const isReachableProgress = (
       && hasNoReviewData(diagnosis, repair, evidence)
       && attemptsAreEmpty(attempts);
   }
+  const diagnosisRequired = mission.kind !== 'opposite'
+    && (stage === 'repair' || stage === 'evidence' || stage === 'complete');
+  const repairRequired = (mission.kind === 'collision' || mission.kind === 'repair')
+    && (stage === 'evidence' || stage === 'complete');
+  const evidenceRequired = stage === 'complete';
   if (prediction === null
     || attempts.predictions.length !== 1
     || !structurallyEqual(prediction, attempts.predictions[attempts.predictions.length - 1])
-    || !matchesLastAttempt(diagnosis, attempts.diagnoses)
-    || !matchesLastAttempt(repair, attempts.repairs)
-    || !matchesLastAttempt(evidence, attempts.evidence)) return false;
+    || !matchesCurrentAttempt(diagnosis, attempts.diagnoses, diagnosisRequired)
+    || !matchesCurrentAttempt(repair, attempts.repairs, repairRequired)
+    || !matchesCurrentAttempt(evidence, attempts.evidence, evidenceRequired)) return false;
   if (stage === 'folding') {
     return foldStepIndex >= 0 && foldStepIndex < 5
       && hasNoReviewData(diagnosis, repair, evidence);

@@ -11,6 +11,7 @@ import {
   getCriticalActionId,
 } from '../../src/domain/learning/selectors';
 import { getMissionById } from '../../src/content/missions/catalog';
+import { evaluateDiagnosis } from '../../src/domain/learning/diagnosis';
 import { validateCubeNet } from '../../src/domain/net/validateCubeNet';
 import type {
   DiagnosisSubmission,
@@ -212,6 +213,29 @@ describe('learning reducer', () => {
       diagnosis: { selectedErrorType: 'decoration-direction', selectedFaceIds: ['F3'] },
     });
     expect(right.stage).toBe('evidence');
+  });
+
+  it('accepts tracking diagnosis from an alternate learner base even when target match is false', () => {
+    const alternateEvaluation = evaluateDiagnosis(
+      getMissionById('cube-track-01'),
+      { selectedErrorType: 'decoration-direction', selectedFaceIds: ['F3'] },
+      'F2',
+    );
+    expect(alternateEvaluation.contextValid).toBe(true);
+    expect(alternateEvaluation.decoration?.matchesTarget).toBe(false);
+    expect(alternateEvaluation.isCorrect).toBe(true);
+    const selected = learningReducer(createInitialLearningState(), {
+      type: 'SELECT_MISSION', missionId: 'cube-track-01',
+    });
+    const folded = learningReducer(
+      learningReducer(selected, { type: 'SUBMIT_PREDICTION', prediction: f2BasePrediction }),
+      { type: 'SET_FOLD_STEP', stepIndex: 5 },
+    );
+    const diagnosed = learningReducer(folded, {
+      type: 'SUBMIT_DIAGNOSIS',
+      diagnosis: { selectedErrorType: 'decoration-direction', selectedFaceIds: ['F3'] },
+    });
+    expect(diagnosed.stage).toBe('evidence');
   });
 
   it('rejects out-of-range and backwards fold actions outside the fold stage', () => {

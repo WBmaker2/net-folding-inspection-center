@@ -5,6 +5,10 @@ import type { DiagnosisErrorType, DiagnosisSubmission, MissionDefinition } from 
 
 export interface DiagnosisEvaluation {
   readonly isCorrect: boolean;
+  /** Whether the authoritative context was available and structurally valid. */
+  readonly contextValid: boolean;
+  /** Whether every externally supplied engine result matched recomputation. */
+  readonly sourceMatches: boolean;
   readonly validation: CubeValidationResult;
   readonly expectedErrorType: DiagnosisErrorType;
   readonly collisionPair?: readonly [FaceId, FaceId];
@@ -17,6 +21,8 @@ export interface DiagnosisEvaluationOptions {
   readonly validation?: CubeValidationResult;
   /** 화면이 보여 준 장식 결과입니다. tracking 진단에는 반드시 필요합니다. */
   readonly decoration?: DecorationOrientationResult;
+  /** UI callers can require an independently supplied decoration result. */
+  readonly decorationRequired?: boolean;
 }
 
 const FACE_IDS: readonly FaceId[] = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6'];
@@ -45,24 +51,49 @@ export const validationMatches = (
   provided: CubeValidationResult,
   expected: CubeValidationResult,
 ): boolean => {
-  if (provided.isValid !== expected.isValid || provided.reason !== expected.reason
-    || provided.missingNormals.length !== expected.missingNormals.length
-    || provided.missingNormals.some((direction, index) => direction !== expected.missingNormals[index])
-    || provided.collisions.length !== expected.collisions.length
-    || provided.collisions.some((collision, index) => {
-      const expectedCollision = expected.collisions[index];
-      return expectedCollision === undefined
-        || collision.faceIds[0] !== expectedCollision.faceIds[0]
-        || collision.faceIds[1] !== expectedCollision.faceIds[1]
-        || !sameVec3(collision.normal, expectedCollision.normal);
-    })) return false;
+  if (!isValidationShape(provided) || !isValidationShape(expected)) return false;
+  try {
+    if (provided.isValid !== expected.isValid || provided.reason !== expected.reason
+      || provided.missingNormals.length !== expected.missingNormals.length
+      || provided.missingNormals.some((direction, index) => direction !== expected.missingNormals[index])
+      || provided.collisions.length !== expected.collisions.length
+      || provided.collisions.some((collision, index) => {
+        const expectedCollision = expected.collisions[index];
+        return expectedCollision === undefined
+          || !Array.isArray(collision?.faceIds) || collision.faceIds.length !== 2
+          || !Array.isArray(expectedCollision.faceIds) || expectedCollision.faceIds.length !== 2
+          || collision.faceIds[0] !== expectedCollision.faceIds[0]
+          || collision.faceIds[1] !== expectedCollision.faceIds[1]
+          || !sameVec3(collision.normal, expectedCollision.normal);
+      })) return false;
 
-  const expectedEntries = [...expected.frames.entries()];
-  return provided.frames.size === expected.frames.size
-    && expectedEntries.every(([faceId, frame]) => {
-      const providedFrame = provided.frames.get(faceId);
-      return providedFrame !== undefined && sameFrame(providedFrame, frame);
-    });
+    const expectedEntries = [...expected.frames.entries()];
+    return provided.frames.size === expected.frames.size
+      && expectedEntries.every(([faceId, frame]) => {
+        const providedFrame = provided.frames.get(faceId);
+        return providedFrame !== undefined && sameFrame(providedFrame, frame);
+      });
+  } catch {
+    return false;
+  }
+};
+
+export const isValidationShape = (value: unknown): value is CubeValidationResult => {
+  try {
+    if (typeof value !== 'object' || value === null) return false;
+    const candidate = value as Partial<CubeValidationResult>;
+    return typeof candidate.isValid === 'boolean'
+      && typeof candidate.reason === 'string'
+      && Array.isArray(candidate.missingNormals)
+      && candidate.missingNormals.every((direction) => AXIS_DIRECTIONS.includes(direction as AxisDirection))
+      && Array.isArray(candidate.collisions)
+      && candidate.frames !== null
+      && candidate.frames !== undefined
+      && typeof candidate.frames.size === 'number'
+      && typeof candidate.frames.get === 'function';
+  } catch {
+    return false;
+  }
 };
 
 const collisionPairFor = (
@@ -90,6 +121,23 @@ const expectedDecorationFor = (
   return evaluateDecorationOrientation(face, frame, target.targetWorldUp);
 };
 
+const suppliedDecorationMatches = (
+  provided: DecorationOrientationResult | undefined,
+  expected: DecorationOrientationResult | undefined,
+  required: boolean,
+): boolean => {
+  if (expected === undefined || (required && provided === undefined)) return false;
+  if (provided === undefined) return true;
+  try {
+    return typeof provided === 'object' && provided !== null
+      && provided.worldUp === expected.worldUp
+      && provided.targetWorldUp === expected.targetWorldUp
+      && provided.matchesTarget === expected.matchesTarget;
+  } catch {
+    return false;
+  }
+};
+
 /**
  * The sole diagnosis authority. It always recomputes from the learner's base;
  * supplied screen results are only accepted when they match that computation.
@@ -102,12 +150,17 @@ export const evaluateDiagnosis = (
 ): DiagnosisEvaluation => {
   const validation = validateCubeNet(mission.net, baseFaceId);
   const expectedErrorType = expectedErrorTypeFor(mission);
-  if (options.validation !== undefined && !validationMatches(options.validation, validation)) {
-    return { isCorrect: false, validation, expectedErrorType };
-  }
+  const sourceValidationMatches = options.validation === undefined
+    || validationMatches(options.validation, validation);
 
   if (!diagnosis || !Array.isArray(diagnosis.selectedFaceIds)) {
-    return { isCorrect: false, validation, expectedErrorType };
+    return {
+      isCorrect: false,
+      contextValid: sourceValidationMatches,
+      sourceMatches: sourceValidationMatches,
+      validation,
+      expectedErrorType,
+    };
   }
   const facesAreKnown = diagnosis.selectedFaceIds.every((faceId) => FACE_IDS.includes(faceId));
   const errorTypeMatches = diagnosis.selectedErrorType === expectedErrorType;
@@ -118,17 +171,19 @@ export const evaluateDiagnosis = (
   if (mission.kind === 'tracking') {
     const expectedDecoration = expectedDecorationFor(mission, validation);
     const providedDecoration = options.decoration;
-    const decorationMatches = expectedDecoration !== undefined
-      && (providedDecoration === undefined
-        || (providedDecoration.worldUp === expectedDecoration.worldUp
-          && providedDecoration.targetWorldUp === expectedDecoration.targetWorldUp
-          && providedDecoration.matchesTarget === expectedDecoration.matchesTarget));
+    const decorationMatches = suppliedDecorationMatches(
+      providedDecoration,
+      expectedDecoration,
+      options.decorationRequired === true,
+    );
+    const sourceMatches = sourceValidationMatches && decorationMatches;
     const selectedTarget = diagnosis.selectedFaceIds.length === 1
       && diagnosis.selectedFaceIds[0] === mission.answer.decorationTarget.faceId;
     return {
       isCorrect: validation.isValid && facesAreKnown && errorTypeMatches
-        && selectedTarget && diagnosis.selectedMissingDirection === undefined && decorationMatches
-        && expectedDecoration.matchesTarget,
+        && selectedTarget && diagnosis.selectedMissingDirection === undefined && decorationMatches,
+      contextValid: sourceMatches && expectedDecoration !== undefined,
+      sourceMatches,
       validation,
       expectedErrorType,
       decoration: expectedDecoration,
@@ -140,6 +195,8 @@ export const evaluateDiagnosis = (
   return {
     isCorrect: isCollisionModel && facesAreKnown && errorTypeMatches && pairMatches
       && missingDirection !== undefined && diagnosis.selectedMissingDirection === missingDirection,
+    contextValid: sourceValidationMatches && isCollisionModel && missingDirection !== undefined,
+    sourceMatches: sourceValidationMatches,
     validation,
     expectedErrorType,
     collisionPair: expectedPair,
@@ -151,8 +208,8 @@ export const evaluateDiagnosis = (
 export const firstSharedNormalStep = (
   sequence: FoldSequence | undefined,
   faceIds: readonly FaceId[],
-): number => {
-  if (sequence === undefined || faceIds.length < 2) return 0;
+): number | null => {
+  if (sequence === undefined || faceIds.length < 2) return null;
   for (const snapshot of sequence.snapshots) {
     const frames = faceIds.map((faceId) => snapshot.frames.get(faceId));
     if (frames.length >= 2 && frames.every((frame) => frame !== undefined)
@@ -160,7 +217,7 @@ export const firstSharedNormalStep = (
       return snapshot.stepIndex;
     }
   }
-  return 0;
+  return null;
 };
 
 export const isAxisDirection = (value: unknown): value is AxisDirection => (

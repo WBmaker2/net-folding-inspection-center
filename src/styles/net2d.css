@@ -309,6 +309,8 @@
 }
 
 .diagnosis-validation-panel,
+.diagnosis-decoration-panel,
+.diagnosis-collision-visual,
 .diagnosis-fieldset {
   margin-block: 1rem;
   padding: 1rem;
@@ -318,6 +320,8 @@
 }
 
 .diagnosis-validation-panel h2,
+.diagnosis-decoration-panel h2,
+.diagnosis-collision-visual h2,
 .diagnosis-fieldset legend {
   font-weight: 900;
 }
@@ -325,6 +329,44 @@
 .diagnosis-validation-panel h2 {
   margin-top: 0;
   font-size: 1.05rem;
+}
+
+.diagnosis-decoration-panel h2,
+.diagnosis-collision-visual h2 {
+  margin-top: 0;
+  font-size: 1.05rem;
+}
+
+.diagnosis-face-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.diagnosis-face-chip {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  padding: 0.55rem 0.8rem;
+  border: 3px solid var(--accent);
+  border-radius: 999px;
+  font-weight: 900;
+}
+
+.diagnosis-missing-axis {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0;
+  padding: 0.7rem;
+  border: 3px dashed var(--accent);
+  border-radius: 0.6rem;
+  font-weight: 900;
+}
+
+.diagnosis-missing-axis span {
+  font-size: 1.5rem;
+  line-height: 1;
 }
 
 .diagnosis-radio-label {

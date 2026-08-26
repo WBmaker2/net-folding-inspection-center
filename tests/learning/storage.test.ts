@@ -138,6 +138,22 @@ describe('progress storage', () => {
     expect(store.load()?.prediction?.baseFaceId).toBe('F2');
     expect(store.load()?.stage).toBe('repair');
   });
+  it('round-trips an alternate-base tracking diagnosis with recomputed decoration authority', () => {
+    const selected = learningReducer(createInitialLearningState(), {
+      type: 'SELECT_MISSION', missionId: 'cube-track-01',
+    });
+    const predicted = learningReducer(selected, {
+      type: 'SUBMIT_PREDICTION', prediction: f2BasePrediction,
+    });
+    const folded = learningReducer(predicted, { type: 'SET_FOLD_STEP', stepIndex: 5 });
+    const diagnosed = learningReducer(folded, {
+      type: 'SUBMIT_DIAGNOSIS',
+      diagnosis: { selectedErrorType: 'decoration-direction', selectedFaceIds: ['F3'] },
+    });
+    const persisted = toPersistedProgress(diagnosed);
+    expect(persisted.stage).toBe('evidence');
+    expect(sanitizePersistedProgress(persisted)).toEqual(persisted);
+  });
   it('keeps the default memory store in memory only', () => {
     const store = createMemoryProgressStore();
     const progress = toPersistedProgress(progressedState());

@@ -34,7 +34,7 @@ describe('DiagnosisScreen', () => {
     expect(screen.getByRole('heading', { name: '접힌 결과 진단하기' })).toHaveFocus();
     expect(screen.getByRole('radio', { name: '두 면이 같은 자리에 겹쳐요' })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: '빈 면이 생겨요' })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: '장식 방향이 달라요' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '장식 방향을 확인해야 해요' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '진단 확인' })).toBeDisabled();
 
     await user.click(screen.getByRole('radio', { name: '두 면이 같은 자리에 겹쳐요' }));
@@ -64,6 +64,11 @@ describe('DiagnosisScreen', () => {
     expect(screen.getByRole('status')).toHaveTextContent('2번 면과 6번 면이 같은 공간을 차지합니다.');
     expect(screen.getByRole('status')).toHaveTextContent('비어 있는 방향은 +x입니다.');
     expect(screen.queryByText(/옮기면|좌표|x:|y:/u)).not.toBeInTheDocument();
+    const visual = screen.getByRole('region', { name: '겹침 진단 시각화' });
+    expect(visual).toHaveTextContent('2번 면, 노란색, 사각형');
+    expect(visual).toHaveTextContent('6번 면, 청록색, 십자');
+    expect(visual).toHaveAccessibleName('겹침 진단 시각화');
+    expect(visual).toHaveTextContent('비어 있는 축 방향 윤곽: +x');
   });
 
   it('preserves wrong attempts and offers the first shared-normal fold step', async () => {
@@ -85,7 +90,7 @@ describe('DiagnosisScreen', () => {
     await user.click(screen.getByRole('radio', { name: '-x 방향' }));
     await user.click(screen.getByRole('button', { name: '진단 확인' }));
     expect(onSubmit).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole('status')).toHaveTextContent('아직 맞는 원인을 찾지 못했습니다.');
+    expect(screen.getByRole('status')).toHaveTextContent('같은 법선이 되는 단계가 없어 처음부터 다시 살펴보세요.');
     await user.click(screen.getByRole('button', { name: '접기 단계 되돌아보기' }));
     expect(onReturn).toHaveBeenCalledWith(expect.any(Number));
   });
@@ -101,21 +106,57 @@ describe('DiagnosisScreen', () => {
         onSubmit={onSubmit}
       />,
     );
-    await user.click(screen.getByRole('radio', { name: '장식 방향이 달라요' }));
+    await user.click(screen.getByRole('radio', { name: '장식 방향을 확인해야 해요' }));
     await user.click(screen.getByRole('button', { name: /3번 면/ }));
     await user.click(screen.getByRole('button', { name: '진단 확인' }));
-    expect(screen.getByRole('status')).toHaveTextContent('3번 면의 장식이 +y 방향을 향합니다.');
+    expect(screen.getByRole('status')).toHaveTextContent('3번 면의 실제 장식 방향은 +y, 목표 방향은 +y입니다.');
     expect(screen.getByRole('region', { name: '전개도 유효성 검사' })).toHaveTextContent('전개도 검사');
   });
 
   it('fails closed when decoration is missing or validation is mismatched, and does not claim callback success', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn(() => { throw new Error('record failed'); });
-    render(<DiagnosisScreen mission={trackingMission} validation={trackingValidation} onSubmit={onSubmit} />);
-    await user.click(screen.getByRole('radio', { name: '장식 방향이 달라요' }));
+    render(
+      <DiagnosisScreen
+        mission={trackingMission}
+        validation={trackingValidation}
+        decoration={trackingDecoration}
+        onSubmit={onSubmit}
+      />,
+    );
+    await user.click(screen.getByRole('radio', { name: '장식 방향을 확인해야 해요' }));
     await user.click(screen.getByRole('button', { name: /3번 면/ }));
     await user.click(screen.getByRole('button', { name: '진단 확인' }));
     expect(screen.queryByText(/장식이 .*향합니다/u)).not.toBeInTheDocument();
     expect(screen.getByRole('alert')).toHaveTextContent('기록하지 못했습니다');
+  });
+
+  it('does not dispatch when tracking decoration context is absent', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(<DiagnosisScreen mission={trackingMission} validation={trackingValidation} onSubmit={onSubmit} />);
+    await user.click(screen.getByRole('radio', { name: '장식 방향을 확인해야 해요' }));
+    await user.click(screen.getByRole('button', { name: /3번 면/ }));
+    await user.click(screen.getByRole('button', { name: '진단 확인' }));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('검사 결과를 확인할 수 없어');
+  });
+
+  it('rejects a supplied decoration mismatch and malformed validation without dispatching an attempt', async () => {
+    const user = userEvent.setup();
+    const onSubmit = vi.fn();
+    render(
+      <DiagnosisScreen
+        mission={trackingMission}
+        validation={{ ...trackingValidation, collisions: null } as never}
+        decoration={{ ...trackingDecoration, worldUp: '-y' }}
+        onSubmit={onSubmit}
+      />,
+    );
+    await user.click(screen.getByRole('radio', { name: '장식 방향을 확인해야 해요' }));
+    await user.click(screen.getByRole('button', { name: /3번 면/ }));
+    await user.click(screen.getByRole('button', { name: '진단 확인' }));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('검사 결과를 확인할 수 없어');
   });
 });

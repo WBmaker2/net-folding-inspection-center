@@ -1,6 +1,10 @@
 import { useMemo, useState } from 'react';
 import { faceAccessibleName, faceNumber } from '../components/net2d/faceLabels';
-import { firstSharedNormalStep, evaluateDiagnosis } from '../domain/learning/diagnosis';
+import {
+  firstSharedNormalStep,
+  evaluateDiagnosis,
+  isValidationShape,
+} from '../domain/learning/diagnosis';
 import type { DiagnosisSubmission, MissionDefinition } from '../domain/learning/types';
 import type {
   AxisDirection,
@@ -17,12 +21,9 @@ export interface DiagnosisScreenProps {
   readonly baseFaceId?: FaceId;
   readonly validation: CubeValidationResult;
   readonly decoration?: DecorationOrientationResult;
-  readonly decorationResult?: DecorationOrientationResult;
   readonly foldSequence?: FoldSequence;
-  readonly sequence?: FoldSequence;
   readonly onSubmit: (diagnosis: DiagnosisSubmission) => void;
   readonly onReturnToFoldStep?: (stepIndex: number) => void;
-  readonly onReviewFoldStep?: (stepIndex: number) => void;
 }
 
 const AXES: readonly { readonly value: AxisDirection; readonly label: string }[] = [
@@ -37,10 +38,11 @@ const AXES: readonly { readonly value: AxisDirection; readonly label: string }[]
 const errorChoices = [
   { value: 'overlap' as const, label: '두 면이 같은 자리에 겹쳐요' },
   { value: 'missing-face' as const, label: '빈 면이 생겨요' },
-  { value: 'decoration-direction' as const, label: '장식 방향이 달라요' },
+  { value: 'decoration-direction' as const, label: '장식 방향을 확인해야 해요' },
 ];
 
-const validationCopy = (validation: CubeValidationResult): string => {
+const validationCopy = (validation: CubeValidationResult | null): string => {
+  if (validation === null) return '전개도 검사 결과를 읽을 수 없습니다.';
   if (validation.reason === 'overlap') return '전개도 검사: 같은 공간을 차지하는 면이 있습니다.';
   if (validation.isValid) return '전개도 검사: 여섯 면이 서로 다른 방향에 놓였습니다.';
   return '전개도 검사: 접는 관계를 다시 확인해야 합니다.';
@@ -48,17 +50,30 @@ const validationCopy = (validation: CubeValidationResult): string => {
 
 const directionLabel = (direction: AxisDirection | undefined): string => direction ?? '확인할 수 없음';
 
+const evaluationUnavailableForTracking = (value: DecorationOrientationResult | undefined): boolean => {
+  try {
+    return typeof value !== 'object' || value === null
+      || typeof value.worldUp !== 'string'
+      || typeof value.targetWorldUp !== 'string'
+      || typeof value.matchesTarget !== 'boolean';
+  } catch {
+    return true;
+  }
+};
+
+interface CollisionEvidence {
+  readonly faceIds: readonly [FaceId, FaceId];
+  readonly missingDirection: AxisDirection;
+}
+
 export function DiagnosisScreen({
   mission,
   validation,
   decoration,
-  decorationResult,
   foldSequence,
-  sequence,
   baseFaceId = mission.baseFaceId,
   onSubmit,
   onReturnToFoldStep,
-  onReviewFoldStep,
 }: DiagnosisScreenProps): React.JSX.Element {
   const headingRef = useFocusHeading<HTMLHeadingElement>();
   const [selectedErrorType, setSelectedErrorType] = useState<DiagnosisSubmission['selectedErrorType'] | null>(null);
@@ -66,11 +81,13 @@ export function DiagnosisScreen({
   const [selectedMissingDirection, setSelectedMissingDirection] = useState<AxisDirection | undefined>();
   const [submitted, setSubmitted] = useState<DiagnosisSubmission | null>(null);
   const [isCorrectResult, setIsCorrectResult] = useState(false);
-  const [reviewStep, setReviewStep] = useState(0);
+  const [contextError, setContextError] = useState(false);
+  const [collisionEvidence, setCollisionEvidence] = useState<CollisionEvidence | null>(null);
+  const [reviewStep, setReviewStep] = useState<number | null>(null);
   const [feedback, setFeedback] = useState('');
   const [submitError, setSubmitError] = useState('');
-  const suppliedDecoration = decoration ?? decorationResult;
-  const suppliedSequence = foldSequence ?? sequence;
+  const suppliedDecoration = decoration;
+  const renderValidation = isValidationShape(validation) ? validation : null;
 
   const faceById = useMemo(
     () => new Map(mission.net.faces.map((face) => [face.id, face] as const)),
@@ -87,7 +104,9 @@ export function DiagnosisScreen({
     setSelectedMissingDirection(undefined);
     setSubmitted(null);
     setIsCorrectResult(false);
-    setReviewStep(0);
+    setContextError(false);
+    setCollisionEvidence(null);
+    setReviewStep(null);
     setFeedback('');
     setSubmitError('');
   };
@@ -101,7 +120,9 @@ export function DiagnosisScreen({
     });
     setSubmitted(null);
     setIsCorrectResult(false);
-    setReviewStep(0);
+    setContextError(false);
+    setCollisionEvidence(null);
+    setReviewStep(null);
     setFeedback('');
     setSubmitError('');
   };
@@ -113,6 +134,21 @@ export function DiagnosisScreen({
       selectedFaceIds: [...selectedFaceIds],
       ...(selectedMissingDirection === undefined ? {} : { selectedMissingDirection }),
     };
+    const rawEvaluation = evaluateDiagnosis(mission, diagnosis, baseFaceId, {
+      validation,
+      decoration: suppliedDecoration,
+      decorationRequired: mission.kind === 'tracking',
+    });
+    const evaluation = rawEvaluation;
+    if (!evaluation.contextValid) {
+      setSubmitted(null);
+      setIsCorrectResult(false);
+      setContextError(true);
+      setCollisionEvidence(null);
+      setReviewStep(null);
+      setSubmitError('검사 결과를 확인할 수 없어 진단을 기록하지 않았습니다. 접기 결과를 다시 불러와 주세요.');
+      return;
+    }
     setSubmitError('');
     try {
       onSubmit(diagnosis);
@@ -121,18 +157,20 @@ export function DiagnosisScreen({
       return;
     }
     setSubmitted(diagnosis);
-    const rawEvaluation = evaluateDiagnosis(mission, diagnosis, baseFaceId, {
-      validation,
-      decoration: suppliedDecoration,
-    });
-    const evaluation = mission.kind === 'tracking' && suppliedDecoration === undefined
-      ? { ...rawEvaluation, isCorrect: false }
-      : rawEvaluation;
     setIsCorrectResult(evaluation.isCorrect);
-    const nextReviewStep = firstSharedNormalStep(suppliedSequence, diagnosis.selectedFaceIds);
+    setContextError(false);
+    setCollisionEvidence(
+      evaluation.isCorrect && evaluation.collisionPair !== undefined && evaluation.missingDirection !== undefined
+        ? { faceIds: evaluation.collisionPair, missingDirection: evaluation.missingDirection }
+        : null,
+    );
+    const nextReviewStep = firstSharedNormalStep(foldSequence, diagnosis.selectedFaceIds);
     setReviewStep(nextReviewStep);
     if (evaluation.isCorrect && mission.kind === 'tracking' && evaluation.decoration !== undefined) {
-      setFeedback(`${faceNumber(faceById.get(mission.answer.decorationTarget.faceId)!)}번 면의 장식이 ${directionLabel(evaluation.decoration.targetWorldUp)} 방향을 향합니다.`);
+      const matchCopy = evaluation.decoration.matchesTarget ? '목표와 같습니다.' : '목표와 다릅니다. 방향을 비교해 보세요.';
+      setFeedback(
+        `${faceNumber(faceById.get(mission.answer.decorationTarget.faceId)!)}번 면의 실제 장식 방향은 ${directionLabel(evaluation.decoration.worldUp)}, 목표 방향은 ${directionLabel(evaluation.decoration.targetWorldUp)}입니다. ${matchCopy}`,
+      );
     } else if (evaluation.isCorrect && evaluation.collisionPair !== undefined) {
       const [first, second] = evaluation.collisionPair;
       setFeedback(
@@ -151,7 +189,9 @@ export function DiagnosisScreen({
     } else {
       setFeedback(
         selectedErrorType === 'overlap' && selectedFaceIds.length === 2
-          ? `아직 맞는 원인을 찾지 못했습니다. 선택한 두 면이 처음 같은 법선이 된 ${nextReviewStep}단계를 되돌아보세요.`
+          ? (nextReviewStep === null
+            ? '아직 맞는 원인을 찾지 못했습니다. 같은 법선이 되는 단계가 없어 처음부터 다시 살펴보세요.'
+            : `아직 맞는 원인을 찾지 못했습니다. 선택한 두 면이 처음 같은 법선이 된 ${nextReviewStep}단계를 되돌아보세요.`)
           : '아직 맞는 원인을 찾지 못했습니다. 접힌 면과 모서리를 다시 살펴보세요.',
       );
     }
@@ -165,9 +205,46 @@ export function DiagnosisScreen({
 
       <section className="diagnosis-validation-panel" aria-label="전개도 유효성 검사">
         <h2>전개도 유효성</h2>
-        <p>{validationCopy(validation)}</p>
-        {validation.collisions.length > 0 && <p>겹침 후보가 있어 면의 법선 방향을 비교합니다.</p>}
+        <p>{validationCopy(renderValidation)}</p>
+        {renderValidation?.collisions.length ? <p>겹침 후보가 있어 면의 법선 방향을 비교합니다.</p> : null}
       </section>
+
+      {mission.kind === 'tracking' && (
+        <section className="diagnosis-decoration-panel" aria-label="장식 방향 검사">
+          <h2>장식 방향 검사</h2>
+          {submitted === null || contextError || evaluationUnavailableForTracking(suppliedDecoration) ? (
+            <p>{suppliedDecoration === undefined ? '아직 장식 방향 결과를 확인하지 않았습니다.' : '장식 방향 결과를 확인할 수 없습니다.'}</p>
+          ) : suppliedDecoration !== undefined ? (
+            <p>
+              실제 방향: {suppliedDecoration.worldUp} · 목표 방향: {suppliedDecoration.targetWorldUp} ·
+              {' '}{suppliedDecoration.matchesTarget ? '목표와 같습니다.' : '목표와 다릅니다.'}
+            </p>
+          ) : null}
+        </section>
+      )}
+
+      {collisionEvidence !== null && (
+        <section className="diagnosis-collision-visual" aria-label="겹침 진단 시각화" role="region">
+          <h2>겹침과 빈 방향을 한눈에 보기</h2>
+          <div className="diagnosis-face-chips" aria-label="겹친 두 면">
+            {collisionEvidence.faceIds.map((faceId) => {
+              const face = faceById.get(faceId);
+              return face === undefined ? null : (
+                <span className="diagnosis-face-chip" key={faceId}>
+                  {faceAccessibleName(face)}
+                </span>
+              );
+            })}
+          </div>
+          <p
+            className="diagnosis-missing-axis"
+            aria-label={`비어 있는 축 방향 ${collisionEvidence.missingDirection} 윤곽`}
+          >
+            <span aria-hidden="true">□</span>
+            비어 있는 축 방향 윤곽: {collisionEvidence.missingDirection}
+          </p>
+        </section>
+      )}
 
       <fieldset className="diagnosis-fieldset">
         <legend>1. 어떤 오류인가요?</legend>
@@ -221,7 +298,9 @@ export function DiagnosisScreen({
                     setSelectedMissingDirection(axis.value);
                     setSubmitted(null);
                     setIsCorrectResult(false);
-                    setReviewStep(0);
+                    setContextError(false);
+                    setCollisionEvidence(null);
+                    setReviewStep(null);
                     setFeedback('');
                   }}
                 />
@@ -247,8 +326,7 @@ export function DiagnosisScreen({
           type="button"
           className="diagnosis-review-button"
           onClick={() => {
-            onReturnToFoldStep?.(reviewStep);
-            onReviewFoldStep?.(reviewStep);
+            onReturnToFoldStep?.(reviewStep ?? 0);
           }}
         >
           접기 단계 되돌아보기
