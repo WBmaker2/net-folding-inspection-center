@@ -2,9 +2,9 @@ import collisionMissions from './collision.json';
 import oppositeMissions from './opposite.json';
 import repairMissions from './repair.json';
 import trackingMissions from './tracking.json';
+import { parseMissionAnswer } from './catalogAnswer';
 import { validateMissionGeometry } from './catalogGeometry';
 import type {
-  AxisDirection,
   FaceDefinition,
   FaceId,
   GridPoint,
@@ -12,16 +12,13 @@ import type {
   NetDefinition,
 } from '../../domain/net/types';
 import type {
-  DecorationTarget,
   ErrorModel,
   GeometryTerm,
   HintFocus,
   HintLevel,
   HintStep,
-  MissionAnswer,
   MissionDefinition,
   MissionId,
-  RepairMove,
   SentenceFrame,
 } from '../../domain/learning/types';
 
@@ -44,15 +41,14 @@ const MISSION_KIND_BY_ID: Readonly<Record<MissionId, MissionKind>> = {
 };
 const MISSION_KINDS = ['tracking', 'opposite', 'collision', 'repair'] as const;
 const ERROR_MODELS = ['none', 'overlap', 'missing-face', 'decoration-direction'] as const;
-const AXIS_DIRECTIONS = ['+x', '-x', '+y', '-y', '+z', '-z'] as const;
 const GEOMETRY_TERMS = ['맞은편', '모서리', '면', '접는 방향', '겹침', '빈 면'] as const;
 const HINT_FOCI = ['shared-edge', 'fold-path', 'compare-candidates'] as const;
 const HINT_LEVELS = [1, 2, 3] as const;
 
 const FACE_STYLES: Readonly<Record<FaceId, Pick<FaceDefinition, 'colorToken' | 'symbol'>>> = {
   F1: { colorToken: 'blue', symbol: 'circle' },
-  F2: { colorToken: 'yellow', symbol: 'triangle' },
-  F3: { colorToken: 'green', symbol: 'square' },
+  F2: { colorToken: 'yellow', symbol: 'square' },
+  F3: { colorToken: 'green', symbol: 'triangle' },
   F4: { colorToken: 'coral', symbol: 'star' },
   F5: { colorToken: 'purple', symbol: 'diamond' },
   F6: { colorToken: 'teal', symbol: 'cross' },
@@ -118,9 +114,6 @@ const oneOf = <T>(
 };
 
 const faceId = (value: unknown, path: string): FaceId => oneOf(value, FACE_IDS, path);
-const axisDirection = (value: unknown, path: string): AxisDirection => (
-  oneOf(value, AXIS_DIRECTIONS, path)
-);
 const missionId = (value: unknown, path: string): MissionId => oneOf(value, MISSION_IDS, path);
 const missionKind = (value: unknown, path: string): MissionKind => (
   oneOf(value, MISSION_KINDS, path)
@@ -225,99 +218,6 @@ const parseFoldOrder = (value: unknown, path: string, baseFaceId: FaceId): reado
   return freezeArray(order);
 };
 
-const parseOppositePair = (value: unknown, path: string) => {
-  const record = recordAt(value, path);
-  const a = faceId(required(record, 'a', path), `${path}.a`);
-  const b = faceId(required(record, 'b', path), `${path}.b`);
-  if (a === b) {
-    return fail(path, 'an opposite pair must contain two different faces');
-  }
-  return Object.freeze({ a, b });
-};
-
-const parseOppositePairs = (value: unknown, path: string) => {
-  const values = arrayAt(value, path);
-  if (values.length !== 3) {
-    return fail(path, 'expected exactly three opposite pairs');
-  }
-  return freezeArray(values.map((pair, index) => parseOppositePair(pair, `${path}[${index}]`)));
-};
-
-const parseCollisionPair = (value: unknown, path: string): readonly [FaceId, FaceId] => {
-  const values = arrayAt(value, path);
-  if (values.length !== 2) {
-    return fail(path, 'expected exactly two face ids');
-  }
-  const pair: [FaceId, FaceId] = [
-    faceId(values[0], `${path}[0]`),
-    faceId(values[1], `${path}[1]`),
-  ];
-  if (pair[0] === pair[1]) {
-    return fail(path, 'a collision pair must contain two different faces');
-  }
-  return Object.freeze(pair);
-};
-
-const parseDecorationTarget = (value: unknown, path: string): DecorationTarget => {
-  const record = recordAt(value, path);
-  return Object.freeze({
-    faceId: faceId(required(record, 'faceId', path), `${path}.faceId`),
-    targetWorldUp: axisDirection(required(record, 'targetWorldUp', path), `${path}.targetWorldUp`),
-  });
-};
-
-const parseRepairMove = (value: unknown, path: string): RepairMove => {
-  const record = recordAt(value, path);
-  return Object.freeze({
-    faceId: faceId(required(record, 'faceId', path), `${path}.faceId`),
-    from: parseGridPoint(required(record, 'from', path), `${path}.from`),
-    to: parseGridPoint(required(record, 'to', path), `${path}.to`),
-  });
-};
-
-const parseAnswer = (value: unknown, path: string, kind: MissionKind): MissionAnswer => {
-  const record = recordAt(value, path);
-  if (kind === 'tracking') {
-    return Object.freeze({
-      topFaceId: faceId(required(record, 'topFaceId', path), `${path}.topFaceId`),
-      oppositePairs: parseOppositePairs(required(record, 'oppositePairs', path), `${path}.oppositePairs`),
-      decorationTarget: parseDecorationTarget(
-        required(record, 'decorationTarget', path),
-        `${path}.decorationTarget`,
-      ),
-    });
-  }
-  if (kind === 'opposite') {
-    return Object.freeze({
-      oppositePair: parseOppositePair(
-        required(record, 'oppositePair', path),
-        `${path}.oppositePair`,
-      ),
-    });
-  }
-  if (kind === 'collision') {
-    return Object.freeze({
-      collisionPair: parseCollisionPair(
-        required(record, 'collisionPair', path),
-        `${path}.collisionPair`,
-      ),
-      missingDirection: axisDirection(
-        required(record, 'missingDirection', path),
-        `${path}.missingDirection`,
-      ),
-    });
-  }
-  return Object.freeze({
-    collisionPair: 'collisionPair' in record
-      ? parseCollisionPair(record.collisionPair, `${path}.collisionPair`)
-      : undefined,
-    missingDirection: 'missingDirection' in record
-      ? axisDirection(record.missingDirection, `${path}.missingDirection`)
-      : undefined,
-    repairMove: parseRepairMove(required(record, 'repairMove', path), `${path}.repairMove`),
-  });
-};
-
 const parseHints = (value: unknown, path: string): readonly HintStep[] => {
   const values = arrayAt(value, path);
   if (values.length !== HINT_LEVELS.length) {
@@ -390,17 +290,15 @@ const parseMission = (value: unknown, index: number): MissionDefinition => {
     `${path}.suggestedFoldOrder`,
     baseFaceId,
   );
-  const mission: MissionDefinition = Object.freeze({
+  const parsedErrorModel = errorModel(required(record, 'errorModel', path), `${path}.errorModel`);
+  const common = {
     id,
     order,
-    kind,
     title,
     question,
     net,
     baseFaceId,
     suggestedFoldOrder,
-    errorModel: errorModel(required(record, 'errorModel', path), `${path}.errorModel`),
-    answer: parseAnswer(required(record, 'answer', path), `${path}.answer`, kind),
     hints: parseHints(required(record, 'hints', path), `${path}.hints`),
     sentenceFrame: parseSentenceFrame(
       required(record, 'sentenceFrame', path),
@@ -410,7 +308,73 @@ const parseMission = (value: unknown, index: number): MissionDefinition => {
       required(record, 'targetVocabulary', path),
       `${path}.targetVocabulary`,
     ),
-  });
+  };
+  let mission: MissionDefinition;
+  if (kind === 'tracking') {
+    if (parsedErrorModel !== 'decoration-direction') {
+      fail(`${path}.errorModel`, 'tracking missions must use decoration-direction');
+    }
+    mission = Object.freeze({
+      ...common,
+      kind,
+      errorModel: 'decoration-direction',
+      answer: parseMissionAnswer(
+        required(record, 'answer', path),
+        `${path}.answer`,
+        kind,
+        fail,
+        parseGridPoint,
+      ),
+    });
+  } else if (kind === 'opposite') {
+    if (parsedErrorModel !== 'none') {
+      fail(`${path}.errorModel`, 'opposite missions must use none');
+    }
+    mission = Object.freeze({
+      ...common,
+      kind,
+      errorModel: 'none',
+      answer: parseMissionAnswer(
+        required(record, 'answer', path),
+        `${path}.answer`,
+        kind,
+        fail,
+        parseGridPoint,
+      ),
+    });
+  } else if (kind === 'collision') {
+    if (parsedErrorModel !== 'overlap') {
+      fail(`${path}.errorModel`, 'collision missions must use overlap');
+    }
+    mission = Object.freeze({
+      ...common,
+      kind,
+      errorModel: 'overlap',
+      answer: parseMissionAnswer(
+        required(record, 'answer', path),
+        `${path}.answer`,
+        kind,
+        fail,
+        parseGridPoint,
+      ),
+    });
+  } else {
+    if (parsedErrorModel !== 'overlap') {
+      fail(`${path}.errorModel`, 'repair missions must use overlap');
+    }
+    mission = Object.freeze({
+      ...common,
+      kind,
+      errorModel: 'overlap',
+      answer: parseMissionAnswer(
+        required(record, 'answer', path),
+        `${path}.answer`,
+        kind,
+        fail,
+        parseGridPoint,
+      ),
+    });
+  }
   validateMissionGeometry(mission, path, fail);
   return mission;
 };

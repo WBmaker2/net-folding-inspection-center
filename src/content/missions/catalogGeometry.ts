@@ -7,6 +7,11 @@ import { validateCubeNet } from '../../domain/net/validateCubeNet';
 import type { FaceId, NetDefinition } from '../../domain/net/types';
 import type { MissionDefinition, RepairMove } from '../../domain/learning/types';
 
+const EXPECTED_DECORATION_TARGETS = {
+  'cube-track-01': { faceId: 'F3', targetWorldUp: '+y' },
+  'cube-track-02': { faceId: 'F4', targetWorldUp: '-y' },
+} as const;
+
 const replaceFace = (net: NetDefinition, move: RepairMove): NetDefinition => Object.freeze({
   faces: Object.freeze(net.faces.map((face) => face.id === move.faceId
     ? Object.freeze({ ...face, grid: Object.freeze({ ...move.to }) })
@@ -24,6 +29,21 @@ export const validateMissionGeometry = (
   fail: (path: string, reason: string) => never,
 ): void => {
   const validation = validateCubeNet(mission.net, mission.baseFaceId);
+  const expectedErrorModel = mission.kind === 'tracking'
+    ? 'decoration-direction'
+    : mission.kind === 'opposite'
+      ? 'none'
+      : 'overlap';
+  if (mission.errorModel !== expectedErrorModel) {
+    fail(`${path}.errorModel`, `must be ${expectedErrorModel} for ${mission.kind} missions`);
+  }
+  if ((mission.kind === 'tracking' || mission.kind === 'opposite') && !validation.isValid) {
+    fail(`${path}.net`, 'must fold into a valid cube net for this mission kind');
+  }
+  if ((mission.kind === 'collision' || mission.kind === 'repair')
+    && validation.reason !== 'overlap') {
+    fail(`${path}.net`, 'must start with an overlapping cube net for this mission kind');
+  }
   try {
     createFoldSequence(mission.net, mission.baseFaceId, mission.suggestedFoldOrder);
   } catch {
@@ -34,8 +54,16 @@ export const validateMissionGeometry = (
     const topFaceId = mission.answer.topFaceId;
     const oppositePairs = mission.answer.oppositePairs;
     const target = mission.answer.decorationTarget;
-    if (topFaceId === undefined || !validation.frames.has(topFaceId)) {
-      fail(`${path}.answer.topFaceId`, 'must identify a face in the computed frames');
+    const baseOppositePairs = getOppositePairs(validation.frames).filter(
+      (pair) => pair.a === mission.baseFaceId || pair.b === mission.baseFaceId,
+    );
+    const expectedTopFaceId = baseOppositePairs.length === 1
+      ? baseOppositePairs[0]?.a === mission.baseFaceId
+        ? baseOppositePairs[0].b
+        : baseOppositePairs[0]?.a
+      : undefined;
+    if (expectedTopFaceId === undefined || topFaceId !== expectedTopFaceId) {
+      fail(`${path}.answer.topFaceId`, 'must be the unique face opposite the base face');
     }
     if (oppositePairs === undefined || JSON.stringify(oppositePairs) !== JSON.stringify(
       getOppositePairs(validation.frames),
@@ -44,6 +72,12 @@ export const validateMissionGeometry = (
     }
     if (target === undefined) {
       fail(`${path}.answer.decorationTarget`, 'is required for tracking missions');
+    }
+    const expectedTarget = EXPECTED_DECORATION_TARGETS[mission.id as keyof typeof EXPECTED_DECORATION_TARGETS];
+    if (expectedTarget === undefined
+      || target.faceId !== expectedTarget.faceId
+      || target.targetWorldUp !== expectedTarget.targetWorldUp) {
+      fail(`${path}.answer.decorationTarget`, 'does not match the declared orientation target');
     }
     const targetFace = mission.net.faces.find((face) => face.id === target.faceId);
     const targetFrame = targetFace === undefined ? undefined : validation.frames.get(targetFace.id);

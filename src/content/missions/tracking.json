@@ -8,8 +8,8 @@
     "net": {
       "faces": [
         { "id": "F1", "grid": { "x": 1, "y": 2 }, "colorToken": "blue", "symbol": "circle", "decorationQuarterTurn": 0 },
-        { "id": "F2", "grid": { "x": 1, "y": 1 }, "colorToken": "yellow", "symbol": "triangle", "decorationQuarterTurn": 0 },
-        { "id": "F3", "grid": { "x": 1, "y": 0 }, "colorToken": "green", "symbol": "square", "decorationQuarterTurn": 1 },
+        { "id": "F2", "grid": { "x": 1, "y": 1 }, "colorToken": "yellow", "symbol": "square", "decorationQuarterTurn": 0 },
+        { "id": "F3", "grid": { "x": 1, "y": 0 }, "colorToken": "green", "symbol": "triangle", "decorationQuarterTurn": 1 },
         { "id": "F4", "grid": { "x": 1, "y": 3 }, "colorToken": "coral", "symbol": "star", "decorationQuarterTurn": 0 },
         { "id": "F5", "grid": { "x": 0, "y": 2 }, "colorToken": "purple", "symbol": "diamond", "decorationQuarterTurn": 0 },
         { "id": "F6", "grid": { "x": 2, "y": 1 }, "colorToken": "teal", "symbol": "cross", "decorationQuarterTurn": 0 }
@@ -47,8 +47,8 @@
     "net": {
       "faces": [
         { "id": "F1", "grid": { "x": 1, "y": 1 }, "colorToken": "blue", "symbol": "circle", "decorationQuarterTurn": 0 },
-        { "id": "F2", "grid": { "x": 1, "y": 0 }, "colorToken": "yellow", "symbol": "triangle", "decorationQuarterTurn": 0 },
-        { "id": "F3", "grid": { "x": 1, "y": 2 }, "colorToken": "green", "symbol": "square", "decorationQuarterTurn": 0 },
+        { "id": "F2", "grid": { "x": 1, "y": 0 }, "colorToken": "yellow", "symbol": "square", "decorationQuarterTurn": 0 },
+        { "id": "F3", "grid": { "x": 1, "y": 2 }, "colorToken": "green", "symbol": "triangle", "decorationQuarterTurn": 0 },
         { "id": "F4", "grid": { "x": 1, "y": 3 }, "colorToken": "coral", "symbol": "star", "decorationQuarterTurn": 3 },
         { "id": "F5", "grid": { "x": 0, "y": 1 }, "colorToken": "purple", "symbol": "diamond", "decorationQuarterTurn": 0 },
         { "id": "F6", "grid": { "x": 2, "y": 1 }, "colorToken": "teal", "symbol": "cross", "decorationQuarterTurn": 0 }
