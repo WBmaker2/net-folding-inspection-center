@@ -9,11 +9,13 @@ import type {
 } from './types';
 import { getMissionById } from '../../content/missions/catalog';
 import { sanitizePersistedProgress } from './storageValidation';
+import { migratePersistedProgress } from './storageMigration';
 import { evaluateEvidenceSubmission, expectedEvidenceSentence } from './evidence';
 import { createInitialLearningState } from './reducer';
 import { freezeRestoredState } from './storageRehydrate';
 
-export { sanitizePersistedProgress } from './storageValidation';
+export { sanitizePersistedProgress, sanitizePersistedProgressV1 } from './storageValidation';
+export { migratePersistedProgress, migratePersistedProgressV1 } from './storageMigration';
 
 export const PROGRESS_STORAGE_KEY = 'nfic.progress.v1';
 /** Alias kept short for storage adapters that use a generic key name. */
@@ -49,7 +51,7 @@ const toPersistedAttempts = (attempts: LearningAttempts): PersistedLearningAttem
 });
 
 export const toPersistedProgress = (state: LearningState): PersistedProgress => cloneProgress({
-  version: 1,
+  version: 2,
   missionId: state.missionId,
   stage: state.stage,
   prediction: state.prediction,
@@ -79,26 +81,30 @@ export const createSessionProgressStore = (storage: Storage): ProgressStore => (
       return null;
     }
     if (raw === null) return null;
-    try {
-      const progress = sanitizePersistedProgress(JSON.parse(raw) as unknown);
-      if (progress === null) {
-        storage.removeItem(PROGRESS_STORAGE_KEY);
-        return null;
-      }
-      const canonical = JSON.stringify(progress);
-      if (raw !== canonical) {
-        try {
-          storage.setItem(PROGRESS_STORAGE_KEY, canonical);
-        } catch {
-          try { storage.removeItem(PROGRESS_STORAGE_KEY); } catch { /* unavailable storage */ }
-          return null;
-        }
-      }
-      return progress;
-    } catch {
+    const removeInvalidPayload = (): void => {
       try { storage.removeItem(PROGRESS_STORAGE_KEY); } catch { /* unavailable storage */ }
+    };
+    let progress: PersistedProgress | null;
+    try {
+      progress = migratePersistedProgress(JSON.parse(raw) as unknown);
+    } catch {
+      removeInvalidPayload();
       return null;
     }
+    if (progress === null) {
+      removeInvalidPayload();
+      return null;
+    }
+    const canonical = JSON.stringify(progress);
+    if (raw !== canonical) {
+      try {
+        storage.setItem(PROGRESS_STORAGE_KEY, canonical);
+      } catch {
+        removeInvalidPayload();
+        return null;
+      }
+    }
+    return progress;
   },
   save: (progress) => {
     const payload = cloneProgress(progress);
@@ -106,7 +112,6 @@ export const createSessionProgressStore = (storage: Storage): ProgressStore => (
       storage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(payload));
       return true;
     } catch {
-      try { storage.removeItem(PROGRESS_STORAGE_KEY); } catch { /* unavailable storage */ }
       return false;
     }
   },
@@ -144,10 +149,6 @@ export const createDefaultProgressStore = (): ProgressStore => {
       save: (progress) => {
         if (useMemory) return memoryStore.save(progress);
         const saved = sessionStore.save(progress);
-        if (saved === false) {
-          useMemory = true;
-          memoryStore.save(progress);
-        }
         return saved;
       },
       clear: () => {
@@ -230,7 +231,18 @@ export const rehydratePersistedProgress = (progress: PersistedProgress): Learnin
   if (progress.evidence !== null && evidence === null) return null;
   const attemptsEvidence = progress.attempts.evidence.map((item) => {
     const context = evidenceContextFor(progress, item);
-    return context === null ? null : restoreEvidence(progress, item, context.diagnosis, context.repair);
+    const restored = context === null
+      ? null
+      : restoreEvidence(progress, item, context.diagnosis, context.repair);
+    return restored === null ? null : {
+      ...restored,
+      ...(item.diagnosisAttemptIndex === undefined ? {} : {
+        diagnosisAttemptIndex: item.diagnosisAttemptIndex,
+      }),
+      ...(item.repairAttemptIndex === undefined ? {} : {
+        repairAttemptIndex: item.repairAttemptIndex,
+      }),
+    };
   });
   if (attemptsEvidence.some((item) => item === null)) return null;
   return freezeRestoredState({
@@ -292,12 +304,8 @@ export const syncLearningPersistence = (
   if (nextState.storageOptIn === true) {
     try {
       const ok = store.save(toPersistedProgress(nextState)) !== false;
-      if (!ok) {
-        try { store.clear(); } catch { /* best-effort targeted cleanup */ }
-      }
       return { ok, operation: 'save' };
     } catch {
-      try { store.clear(); } catch { /* best-effort targeted cleanup */ }
       return { ok: false, operation: 'save' };
     }
   }

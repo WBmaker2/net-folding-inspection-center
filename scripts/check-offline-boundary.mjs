@@ -15,9 +15,12 @@ const sourceRoot = (root) => path.resolve(root, 'src');
 const assertDirectory = async (directory, label) => {
   let stats;
   try {
-    stats = await fs.stat(directory);
+    stats = await fs.lstat(directory);
   } catch {
     throw new Error(`Offline boundary check requires ${label} directory: ${directory}`);
+  }
+  if (stats.isSymbolicLink()) {
+    throw new Error(`Offline boundary check rejects symbolic link for ${label}: ${directory}`);
   }
   if (!stats.isDirectory()) {
     throw new Error(`Offline boundary check requires ${label} directory: ${directory}`);

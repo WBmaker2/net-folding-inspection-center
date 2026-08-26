@@ -65,8 +65,24 @@ describe('storage failure and controller lifecycle boundaries', () => {
     expect(save).not.toHaveBeenCalled();
     act(() => result.current.dispatch({ type: 'SET_STORAGE_OPT_IN', enabled: true }));
     await waitFor(() => expect(result.current.state.storageOptIn).toBe(false));
-    expect(result.current.persistenceNotice).toContain('저장하지 못했습니다');
-    expect(clear).toHaveBeenCalled();
+    expect(result.current.persistenceNotice).toBeNull();
+    expect(clear).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears a stale persistence notice after a later successful save', async () => {
+    const clear = vi.fn(() => false);
+    const save = vi.fn()
+      .mockReturnValueOnce(false)
+      .mockReturnValueOnce(true);
+    const { result } = renderHook(() => useLearningController({
+      store: { load: () => null, save, clear },
+    }));
+    act(() => result.current.dispatch({ type: 'SET_STORAGE_OPT_IN', enabled: true }));
+    await waitFor(() => expect(result.current.persistenceNotice).toContain('해제하지 못했습니다'));
+    clear.mockReturnValue(true);
+    act(() => result.current.dispatch({ type: 'SET_STORAGE_OPT_IN', enabled: true }));
+    await waitFor(() => expect(result.current.persistenceNotice).toBeNull());
+    expect(clear).toHaveBeenCalledTimes(1);
   });
 
   it('does not write on a StrictMode mount or when state identity is unchanged', () => {
@@ -85,6 +101,24 @@ describe('storage failure and controller lifecycle boundaries', () => {
     const store = createSessionProgressStore(storage);
     expect(store.clear()).toBe(false);
     expect(PROGRESS_STORAGE_KEY).toBe('nfic.progress.v1');
+  });
+
+  it('does not perform adapter cleanup after an atomic session save failure', () => {
+    const removeItem = vi.fn();
+    const storage = {
+      get length() { return 0; },
+      clear: vi.fn(),
+      getItem: () => null,
+      key: () => null,
+      removeItem,
+      setItem: () => { throw new Error('quota'); },
+    } as unknown as Storage;
+    const store = createSessionProgressStore(storage);
+    const selected = learningReducer(createInitialLearningState(), {
+      type: 'SELECT_MISSION', missionId: 'cube-track-01',
+    });
+    expect(store.save(toPersistedProgress(selected))).toBe(false);
+    expect(removeItem).not.toHaveBeenCalled();
   });
 
   it('rejects non-canonical, impossible, and PII timestamp strings at both boundaries', () => {

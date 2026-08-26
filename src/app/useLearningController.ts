@@ -8,8 +8,8 @@ import {
 } from '../domain/learning/reducer';
 import {
   createDefaultProgressStore,
+  migratePersistedProgress,
   rehydratePersistedProgress,
-  sanitizePersistedProgress,
   syncLearningPersistence,
 } from '../domain/learning/storage';
 import type {
@@ -53,7 +53,7 @@ export function useLearningController(
     let raw: ReturnType<ProgressStore['load']> = null;
     try {
       raw = store.load();
-      const sanitized = raw === null ? null : sanitizePersistedProgress(raw);
+      const sanitized = raw === null ? null : migratePersistedProgress(raw);
       const restored = sanitized === null ? null : rehydratePersistedProgress(sanitized);
       if (restored !== null) return { state: restored, restored: true };
       if (raw !== null) store.clear();
@@ -79,6 +79,8 @@ export function useLearningController(
       if (result.operation === 'save' && state.storageOptIn) {
         dispatch({ type: 'SET_STORAGE_OPT_IN', enabled: false });
       }
+    } else if (result?.ok === true) {
+      setPersistenceNotice(null);
     }
   }, [state, store]);
 

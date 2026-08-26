@@ -192,7 +192,7 @@ describe('progress storage', () => {
     expect(setItem).toHaveBeenCalledTimes(1);
     expect(setItem).toHaveBeenCalledWith(PROGRESS_STORAGE_KEY, expect.any(String));
     const saved = JSON.parse(storage.getItem(PROGRESS_STORAGE_KEY) ?? '{}') as Record<string, unknown>;
-    expect(saved).toMatchObject({ version: 1, missionId: 'cube-track-01' });
+    expect(saved).toMatchObject({ version: 2, missionId: 'cube-track-01' });
     expect(JSON.stringify(saved)).not.toMatch(/name|student|email|free.?text|score|점수|이름|학번|이메일/u);
   });
   it('clears the exact key as soon as opt-in is revoked', () => {

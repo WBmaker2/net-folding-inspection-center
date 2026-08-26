@@ -13,6 +13,7 @@ import type {
   PersistedEvidenceSubmission,
   PersistedLearningAttempts,
   PersistedProgress,
+  PersistedProgressV1,
   PredictionRecord,
   RepairSubmission,
 } from './types';
@@ -304,6 +305,7 @@ const isReachableProgress = (
   evidence: PersistedEvidenceSubmission | null,
   attempts: PersistedLearningAttempts,
   completedMissionIds: readonly MissionId[],
+  validateEvidence = true,
 ): boolean => {
   if (missionId === null) {
     return stage === 'intake'
@@ -337,7 +339,7 @@ const isReachableProgress = (
   if (attempts.repairs.some((repair) => !repairMatchesMission(mission, repair, prediction.baseFaceId))) {
     return false;
   }
-  if (!evidenceAttemptsAreValid(mission, prediction, attempts)) return false;
+  if (validateEvidence && !evidenceAttemptsAreValid(mission, prediction, attempts)) return false;
   if (stage === 'folding') {
     return foldStepIndex >= 0 && foldStepIndex < 5
       && hasNoReviewData(diagnosis, repair, evidence);
@@ -397,9 +399,12 @@ const isReachableProgress = (
   return false;
 };
 
-/** Rebuilds persisted data from an allowlist, dropping unknown/personal fields. */
-export const sanitizePersistedProgress = (value: unknown): PersistedProgress | null => {
-  if (!isRecord(value) || value.version !== 1
+const sanitizeProgress = (
+  value: unknown,
+  version: 1 | 2,
+  validateEvidence: boolean,
+): PersistedProgress | PersistedProgressV1 | null => {
+  if (!isRecord(value) || value.version !== version
     || (value.missionId !== null && !isMissionId(value.missionId))
     || !isStage(value.stage)
     || typeof value.foldStepIndex !== 'number'
@@ -426,8 +431,7 @@ export const sanitizePersistedProgress = (value: unknown): PersistedProgress | n
     || attempts === null) return null;
 
   const completedMissionIds = value.completedMissionIds as MissionId[];
-  if (new Set(completedMissionIds).size !== completedMissionIds.length
-    || !isReachableProgress(
+  const reachable = isReachableProgress(
       missionId,
       value.stage,
       prediction,
@@ -437,10 +441,12 @@ export const sanitizePersistedProgress = (value: unknown): PersistedProgress | n
       evidence,
       attempts,
       completedMissionIds,
-    )) return null;
+      validateEvidence,
+    );
+  if (new Set(completedMissionIds).size !== completedMissionIds.length || !reachable) return null;
 
   return {
-    version: 1,
+    version,
     missionId,
     stage: value.stage,
     prediction,
@@ -450,5 +456,17 @@ export const sanitizePersistedProgress = (value: unknown): PersistedProgress | n
     evidence,
     attempts,
     completedMissionIds: [...completedMissionIds],
-  };
+  } as PersistedProgress | PersistedProgressV1;
+};
+
+/** Rebuilds current v2 persisted data from an allowlist. */
+export const sanitizePersistedProgress = (value: unknown): PersistedProgress | null => {
+  const progress = sanitizeProgress(value, 2, true);
+  return progress?.version === 2 ? progress : null;
+};
+
+/** Narrow validator for the historical 0c46db9 payload before migration. */
+export const sanitizePersistedProgressV1 = (value: unknown): PersistedProgressV1 | null => {
+  const progress = sanitizeProgress(value, 1, false);
+  return progress?.version === 1 ? progress : null;
 };

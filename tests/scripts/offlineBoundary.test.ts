@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile, mkdir } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, mkdir, symlink } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -60,6 +60,35 @@ describe('offline boundary checker', () => {
         .toThrow(/requires src directory/u);
     } finally {
       await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a repository-root symlink without scanning its target', async () => {
+    const target = await mkdtemp(path.join(tmpdir(), 'nfic-offline-target-'));
+    const parent = await mkdtemp(path.join(tmpdir(), 'nfic-offline-link-'));
+    const link = path.join(parent, 'repo-link');
+    try {
+      await mkdir(path.join(target, 'src'));
+      await writeFile(path.join(target, 'src', 'bad.ts'), 'fetch("outside")');
+      await symlink(target, link);
+      expect(() => scanAt(link)).toThrow(/rejects symbolic link for repo root/u);
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+      await rm(target, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a src symlink without scanning its target', async () => {
+    const target = await mkdtemp(path.join(tmpdir(), 'nfic-offline-target-'));
+    const root = await mkdtemp(path.join(tmpdir(), 'nfic-offline-root-'));
+    try {
+      await mkdir(path.join(target, 'src'));
+      await writeFile(path.join(target, 'src', 'bad.ts'), 'fetch("outside")');
+      await symlink(path.join(target, 'src'), path.join(root, 'src'));
+      expect(() => scanAt(root)).toThrow(/rejects symbolic link for src/u);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(target, { recursive: true, force: true });
     }
   });
 });

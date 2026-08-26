@@ -269,9 +269,9 @@ export type CriticalActionId =
   | 'submit-evidence'
   | 'next-mission';
 
-/** sessionStorage에 기록되는 유일한 schema입니다. 개인정보 필드는 없습니다. */
+/** The current sessionStorage schema. 개인정보 필드는 없습니다. */
 export interface PersistedProgress {
-  readonly version: 1;
+  readonly version: 2;
   readonly missionId: MissionId | null;
   readonly stage: LearningStage;
   readonly prediction: PredictionRecord | null;
@@ -280,6 +280,22 @@ export interface PersistedProgress {
   readonly repair: RepairSubmission | null;
   readonly evidence: PersistedEvidenceSubmission | null;
   readonly attempts: PersistedLearningAttempts;
+  readonly completedMissionIds: readonly MissionId[];
+}
+
+/** The historical 0c46db9 payload accepted only at the migration boundary. */
+export interface PersistedProgressV1 {
+  readonly version: 1;
+  readonly missionId: MissionId | null;
+  readonly stage: LearningStage;
+  readonly prediction: PredictionRecord | null;
+  readonly foldStepIndex: number;
+  readonly diagnosis: DiagnosisSubmission | null;
+  readonly repair: RepairSubmission | null;
+  readonly evidence: Omit<PersistedEvidenceSubmission, 'diagnosisAttemptIndex' | 'repairAttemptIndex'> | null;
+  readonly attempts: Omit<PersistedLearningAttempts, 'evidence'> & {
+    readonly evidence: readonly (Omit<PersistedEvidenceSubmission, 'diagnosisAttemptIndex' | 'repairAttemptIndex'>)[];
+  };
   readonly completedMissionIds: readonly MissionId[];
 }
 

@@ -63,7 +63,7 @@ test.describe('privacy and safety boundaries', () => {
     await choosePrediction(page);
     await expect(page.getByText(MODEL_BOUNDARY, { exact: true })).toBeVisible();
     const saved = await page.evaluate((key) => JSON.parse(sessionStorage.getItem(key) ?? 'null'), STORAGE_KEY);
-    expect(saved).toMatchObject({ version: 1, missionId: 'cube-track-01', stage: 'folding' });
+    expect(saved).toMatchObject({ version: 2, missionId: 'cube-track-01', stage: 'folding' });
     expect(await page.evaluate(() => Object.keys(sessionStorage))).toEqual([STORAGE_KEY]);
     expect(JSON.stringify(saved)).not.toMatch(/문장|이름|학번|이메일|free.?text/u);
     await page.evaluate(() => sessionStorage.setItem('unrelated-key', 'keep-me'));
