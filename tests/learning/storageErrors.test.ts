@@ -59,9 +59,8 @@ describe('storage failure and controller lifecycle boundaries', () => {
   it('reports a failed save and returns the checkbox state to off', async () => {
     const clear = vi.fn(() => true);
     const save = vi.fn(() => false);
-    const { result } = renderHook(() => useLearningController({
-      store: { load: () => null, save, clear },
-    }), { wrapper: StrictMode });
+    const store = { load: () => null, save, clear };
+    const { result } = renderHook(() => useLearningController({ store }), { wrapper: StrictMode });
     expect(save).not.toHaveBeenCalled();
     act(() => result.current.dispatch({ type: 'SET_STORAGE_OPT_IN', enabled: true }));
     await waitFor(() => expect(result.current.state.storageOptIn).toBe(false));
@@ -74,9 +73,8 @@ describe('storage failure and controller lifecycle boundaries', () => {
     const save = vi.fn()
       .mockReturnValueOnce(false)
       .mockReturnValueOnce(true);
-    const { result } = renderHook(() => useLearningController({
-      store: { load: () => null, save, clear },
-    }));
+    const store = { load: () => null, save, clear };
+    const { result } = renderHook(() => useLearningController({ store }));
     act(() => result.current.dispatch({ type: 'SET_STORAGE_OPT_IN', enabled: true }));
     await waitFor(() => expect(result.current.persistenceNotice).toContain('해제하지 못했습니다'));
     clear.mockReturnValue(true);
@@ -94,6 +92,33 @@ describe('storage failure and controller lifecycle boundaries', () => {
     act(() => result.current.dispatch({ type: 'SET_STORAGE_OPT_IN', enabled: false }));
     expect(result.current.state).not.toBe(initial);
     expect(save).not.toHaveBeenCalled();
+  });
+
+  it('atomically rehydrates a newly injected store without copying the old state', async () => {
+    const stateA = learningReducer(createInitialLearningState(), {
+      type: 'SELECT_MISSION', missionId: 'cube-track-01',
+    });
+    const stateB = learningReducer(createInitialLearningState(), {
+      type: 'SELECT_MISSION', missionId: 'cube-opposite-01',
+    });
+    const saveA = vi.fn();
+    const saveB = vi.fn();
+    const storeA = {
+      load: () => toPersistedProgress(stateA), save: saveA, clear: vi.fn(),
+    };
+    const storeB = {
+      load: () => toPersistedProgress(stateB), save: saveB, clear: vi.fn(),
+    };
+    let activeStore = storeA;
+    const { result, rerender } = renderHook(() => useLearningController({ store: activeStore }));
+    activeStore = storeB;
+    rerender();
+    await waitFor(() => expect(result.current.state.missionId).toBe('cube-opposite-01'));
+    expect(result.current.state.stage).toBe('prediction');
+    expect(result.current.restoredFromStore).toBe(true);
+    expect(result.current.persistenceNotice).toBe('저장한 진행을 불러왔습니다.');
+    expect(saveB).not.toHaveBeenCalled();
+    expect(saveA).not.toHaveBeenCalled();
   });
 
   it('keeps the app key targeted when session save fails', () => {

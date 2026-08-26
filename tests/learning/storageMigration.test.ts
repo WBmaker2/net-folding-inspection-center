@@ -10,11 +10,12 @@ import { moveFace } from '../../src/domain/learning/repair';
 import {
   createSessionProgressStore,
   migratePersistedProgress,
+  PROGRESS_STORAGE_KEY,
   rehydratePersistedProgress,
   sanitizePersistedProgress,
   toPersistedProgress,
 } from '../../src/domain/learning/storage';
-import type { LearningState } from '../../src/domain/learning/types';
+import type { LearningState, MissionId } from '../../src/domain/learning/types';
 
 const prediction = {
   baseFaceId: 'F1' as const,
@@ -24,12 +25,27 @@ const prediction = {
   submittedAtIso: '2026-08-26T00:00:00.000Z',
 };
 
-const evidenceState = (missionId: 'cube-opposite-01' | 'cube-collision-01' | 'cube-repair-01'): LearningState => {
+const MISSION_IDS: readonly MissionId[] = [
+  'cube-track-01', 'cube-track-02',
+  'cube-opposite-01', 'cube-opposite-02',
+  'cube-collision-01', 'cube-collision-02',
+  'cube-repair-01', 'cube-repair-02',
+];
+
+const evidenceState = (missionId: MissionId): LearningState => {
   const mission = getMissionById(missionId);
   let state = learningReducer(createInitialLearningState(), { type: 'SELECT_MISSION', missionId });
   state = learningReducer(state, { type: 'SUBMIT_PREDICTION', prediction });
   state = learningReducer(state, { type: 'SET_FOLD_STEP', stepIndex: 5 });
-  if (mission.kind !== 'opposite') {
+  if (mission.kind === 'tracking') {
+    state = learningReducer(state, {
+      type: 'SUBMIT_DIAGNOSIS',
+      diagnosis: {
+        selectedErrorType: 'decoration-direction',
+        selectedFaceIds: [mission.answer.decorationTarget.faceId],
+      },
+    });
+  } else if (mission.kind !== 'opposite') {
     const context = getEvidenceContext(mission, { baseFaceId: 'F1' });
     state = learningReducer(state, {
       type: 'SUBMIT_DIAGNOSIS',
@@ -43,7 +59,9 @@ const evidenceState = (missionId: 'cube-opposite-01' | 'cube-collision-01' | 'cu
   if (mission.kind === 'collision' || mission.kind === 'repair') {
     const answer = mission.kind === 'repair'
       ? mission.answer.repairMove
-      : { faceId: 'F6' as const, to: { x: 2, y: 1 } };
+      : mission.id === 'cube-collision-01'
+        ? { faceId: 'F6' as const, to: { x: 2, y: 1 } }
+        : { faceId: 'F3' as const, to: { x: 1, y: 0 } };
     state = learningReducer(state, {
       type: 'SUBMIT_REPAIR',
       repair: {
@@ -97,38 +115,49 @@ const asLegacyV1 = (state: LearningState): Record<string, unknown> => {
   return current;
 };
 
+const makeStorage = (initialValue: string): Storage => {
+  let value = initialValue;
+  return {
+    get length() { return value === '' ? 0 : 1; },
+    clear: () => { value = ''; },
+    getItem: () => value === '' ? null : value,
+    key: () => null,
+    removeItem: () => { value = ''; },
+    setItem: (_key: string, nextValue: string) => { value = nextValue; },
+  } as Storage;
+};
+
 describe('explicit v1 to v2 progress migration', () => {
-  it.each(['cube-opposite-01', 'cube-collision-01', 'cube-repair-01'] as const)(
+  it.each(MISSION_IDS)(
     'migrates the old sentence-free %s payload and rewrites canonical v2',
     (missionId) => {
       const legacy = asLegacyV1(evidenceState(missionId));
       const migrated = migratePersistedProgress(legacy);
       expect(migrated).toMatchObject({ version: 2, missionId });
       expect(JSON.stringify(migrated)).not.toMatch(/completedSentence/u);
-      if (missionId === 'cube-opposite-01') {
+      if (missionId === 'cube-opposite-01' || missionId === 'cube-opposite-02') {
         expect(migrated?.attempts.evidence[0]).not.toHaveProperty('diagnosisAttemptIndex');
       } else {
         expect(migrated?.attempts.evidence[0]).toHaveProperty('diagnosisAttemptIndex', 0);
       }
-      expect(rehydratePersistedProgress(migrated!)).not.toBeNull();
+      const restored = rehydratePersistedProgress(migrated!);
+      expect(restored).not.toBeNull();
+      expect(restored?.attempts.evidence[0]?.completedSentence)
+        .toBe(evidenceState(missionId).attempts.evidence[0]?.completedSentence);
+      const storage = makeStorage(JSON.stringify(legacy));
+      const loaded = createSessionProgressStore(storage).load();
+      expect(loaded?.version).toBe(2);
+      expect(JSON.parse(storage.getItem(PROGRESS_STORAGE_KEY) ?? '{}').version).toBe(2);
     },
   );
 
   it('rewrites a migrated session payload and restores its generated sentence', () => {
     const legacy = asLegacyV1(evidenceState('cube-repair-01'));
-    const storage = {
-      value: JSON.stringify(legacy),
-      getItem: () => storage.value,
-      setItem: (_key: string, value: string) => { storage.value = value; },
-      removeItem: () => { storage.value = ''; },
-      clear: () => { storage.value = ''; },
-      get length() { return storage.value === '' ? 0 : 1; },
-      key: () => null,
-    } as unknown as Storage;
+    const storage = makeStorage(JSON.stringify(legacy));
     const store = createSessionProgressStore(storage);
     const loaded = store.load()!;
     expect(loaded.version).toBe(2);
-    expect(JSON.parse(storage.value).version).toBe(2);
+    expect(JSON.parse(storage.getItem(PROGRESS_STORAGE_KEY) ?? '{}').version).toBe(2);
     expect(rehydratePersistedProgress(loaded)?.evidence?.completedSentence)
       .toBe(evidenceState('cube-repair-01').evidence?.completedSentence);
   });
