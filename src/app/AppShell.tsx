@@ -12,7 +12,7 @@ export function AppShell({ children }: AppShellProps): React.JSX.Element {
           <span className="service-mark" aria-hidden="true">
             ◇
           </span>
-          <p className="service-label">전개도 포장 검수소</p>
+          <h1 className="service-label">전개도 포장 검수소</h1>
         </div>
       </header>
       <main id="main-content" className="shell-width main-content">

@@ -433,7 +433,8 @@ export const learningReducer = (
     case 'RETURN_TO_FOLD_STEP': {
       if (state.prediction === null) throw new PredictionRequiredError(action.type, state.stage);
       assertMissionScope(state, action);
-      if (state.stage !== 'diagnosis' && state.stage !== 'repair' && state.stage !== 'evidence') {
+      if (state.stage !== 'diagnosis' && state.stage !== 'repair' && state.stage !== 'evidence'
+        && state.stage !== 'complete') {
         throw transitionError(state, action, 'The fold review can only reopen a completed fold');
       }
       const stepIndex = action.stepIndex ?? 0;

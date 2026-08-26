@@ -105,7 +105,7 @@ export function CompletionScreen({
   return (
     <section className="completion-screen" aria-labelledby="completion-title">
       <p className="eyebrow">검수표 · 성취 증거</p>
-      <h1 id="completion-title" ref={headingRef} tabIndex={-1}>이번 미션 검수표</h1>
+      <h1 id="completion-title" ref={headingRef} tabIndex={-1}>검수 완료</h1>
       <p>맞고 틀린 점수 대신, 무엇을 확인했고 무엇을 더 연습할지 살펴봅니다.</p>
 
       <table className="achievement-table">
