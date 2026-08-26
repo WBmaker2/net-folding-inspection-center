@@ -24,6 +24,13 @@ describe('integer vectors', () => {
     expect(vec3Key([1, 0, -1])).toBe('1,0,-1');
     expect(gridKey({ x: -2, y: 4 })).toBe('-2,4');
   });
+
+  it('accepts a legal orthogonal sum and rejects same-axis overflow', () => {
+    expect(addVec3([1, 0, 0], [0, 1, 0])).toEqual([1, 1, 0]);
+    expect(() => addVec3([1, 0, 0], [1, 0, 0])).toThrow(
+      new RangeError('Vec3 component sum must be between -1 and 1; received 2'),
+    );
+  });
 });
 
 describe('grid adjacency', () => {
