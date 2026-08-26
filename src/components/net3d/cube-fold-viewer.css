@@ -1,0 +1,61 @@
+.cube-fold-viewer {
+  margin-block: 1rem;
+  padding: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  background: var(--surface);
+}
+
+.cube-view-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.cube-view-controls button {
+  min-height: 2.5rem;
+  padding: 0.45rem 0.7rem;
+  border: 2px solid var(--line);
+  border-radius: 0.55rem;
+  color: var(--ink);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.cube-view-controls button[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  font-weight: 800;
+}
+
+.cube-canvas-shell {
+  width: 100%;
+  min-height: 15rem;
+  margin-top: 0.75rem;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  background: #f7fbfc;
+  transition: transform 180ms ease-out;
+}
+
+.cube-fold-viewer[data-motion-mode='snap'] .cube-canvas-shell {
+  transition: none;
+}
+
+.cube-canvas-shell canvas {
+  display: block;
+  width: 100% !important;
+  height: 15rem !important;
+}
+
+.cube-webgl-fallback {
+  margin: 0.75rem 0 0;
+  color: var(--muted-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cube-view-controls button {
+    transition: none;
+  }
+}

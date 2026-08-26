@@ -6,6 +6,7 @@ import type { PredictionRecord } from '../domain/net/types';
 import { LiveRegion } from '../components/common/LiveRegion';
 import { FaceRelationTable } from '../components/net2d/FaceRelationTable';
 import { describeFoldSnapshot } from '../components/net2d/FoldStateDescription';
+import { CubeFoldViewer } from '../components/net3d/CubeFoldViewer';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 import '../styles/net2d.css';
 
@@ -38,7 +39,6 @@ export function FoldingScreen({
   const reducedMotion = usePrefersReducedMotion();
   const [stepIndex, setStepIndex] = useState(() => clampStep(initialStepIndex));
   const [singleFaceMode, setSingleFaceMode] = useState(false);
-  const [basePinned, setBasePinned] = useState(true);
   const [liveMessage, setLiveMessage] = useState('');
   const sequenceResult: SequenceResult = useMemo(() => {
     try {
@@ -136,10 +136,15 @@ export function FoldingScreen({
           />
           한 면씩 보기
         </label>
-        <button type="button" aria-pressed={basePinned} onClick={() => setBasePinned(true)}>
-          기준면 고정
-        </button>
       </div>
+
+      <CubeFoldViewer
+        snapshot={snapshot}
+        net={mission.net}
+        view="front"
+        reducedMotion={reducedMotion}
+        singleFaceMode={singleFaceMode}
+      />
 
       <FaceRelationTable
         frames={snapshot.frames}
@@ -149,7 +154,7 @@ export function FoldingScreen({
         singleFaceMode={singleFaceMode}
         movingFaceId={movingFaceId}
         hingeFaceId={hingeFaceId}
-        basePinned={basePinned}
+        basePinned
       />
     </section>
   );
