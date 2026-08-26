@@ -1,4 +1,3 @@
-import { getOppositePairs } from '../../domain/net/foldEngine';
 import type { FaceFrame, FaceId } from '../../domain/net/types';
 
 export interface FaceRelationTableProps {
@@ -23,6 +22,10 @@ const frameDirection = (frame: FaceFrame | undefined): string => (
   frame === undefined ? '아직 접지 않음' : normalLabels[frame.normal.join(',')] ?? '방향 확인 중'
 );
 
+const oppositeNormalKey = (frame: FaceFrame): string => (
+  `${-frame.normal[0]},${-frame.normal[1]},${-frame.normal[2]}`
+);
+
 export function FaceRelationTable({
   frames,
   baseFaceId,
@@ -33,17 +36,14 @@ export function FaceRelationTable({
   hingeFaceId,
   basePinned = true,
 }: FaceRelationTableProps): React.JSX.Element {
-  const settled = settledFaceIds === undefined
-    ? new Set(frames.keys())
-    : new Set(settledFaceIds);
-  const final = settledFaceIds === undefined || settled.size === finalFrames.size;
+  const final = settledFaceIds === undefined || settledFaceIds.length >= finalFrames.size;
   const faceIds = [...finalFrames.keys()].sort((left, right) => Number(left.slice(1)) - Number(right.slice(1)));
-  const opposites = final ? getOppositePairs(finalFrames) : [];
-  const oppositeByFace = new Map<FaceId, FaceId>();
-  opposites.forEach(({ a, b }) => {
-    oppositeByFace.set(a, b);
-    oppositeByFace.set(b, a);
-  });
+  const normalBuckets = new Map<string, FaceId[]>();
+  for (const [faceId, frame] of frames) {
+    const bucket = normalBuckets.get(frame.normal.join(',')) ?? [];
+    bucket.push(faceId);
+    normalBuckets.set(frame.normal.join(','), bucket);
+  }
 
   return (
     <table className="face-relation-table" aria-label="완성된 면 관계">
@@ -53,21 +53,33 @@ export function FaceRelationTable({
       </thead>
       <tbody>
         {faceIds.map((faceId) => {
-          const isSettled = settled.has(faceId);
+          const frame = frames.get(faceId);
+          const isSettled = frame !== undefined;
           const isFocus = singleFaceMode && (faceId === movingFaceId || faceId === hingeFaceId);
           const rowClass = [
             faceId === baseFaceId && basePinned ? 'is-base' : '',
             isFocus ? 'is-focused' : '',
             isSettled ? 'is-settled' : 'is-unsettled',
           ].filter(Boolean).join(' ');
-          const direction = isSettled ? frameDirection(frames.get(faceId)) : '아직 접지 않음';
-          const opposite = final ? oppositeByFace.get(faceId) : undefined;
+          const ownBucket = frame === undefined ? [] : normalBuckets.get(frame.normal.join(',')) ?? [];
+          const oppositeBucket = frame === undefined ? [] : normalBuckets.get(oppositeNormalKey(frame)) ?? [];
+          const hasDuplicateNormal = ownBucket.length > 1 || oppositeBucket.length > 1;
+          const direction = isSettled
+            ? (hasDuplicateNormal ? '겹침 확인 필요' : frameDirection(frame))
+            : '아직 접지 않음';
+          const relation = !isSettled
+            ? '아직 접지 않음'
+            : hasDuplicateNormal
+              ? '겹침 확인 필요'
+              : oppositeBucket.length === 0
+                ? (final ? '맞은편 관계 없음' : '아직 확인되지 않음')
+                : faceNumber(oppositeBucket[0]!);
           return (
             <tr className={rowClass} key={faceId} data-face-id={faceId}>
               <th scope="row">{faceNumber(faceId)}</th>
               <td>{isSettled ? (faceId === baseFaceId ? '기준면 고정' : '접힘 확인') : '아직 접지 않음'}</td>
               <td>{direction}</td>
-              <td>{opposite === undefined ? '아직 접지 않음' : faceNumber(opposite)}</td>
+              <td>{relation}</td>
             </tr>
           );
         })}

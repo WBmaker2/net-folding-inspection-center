@@ -66,7 +66,11 @@ export function FoldingScreen({
 
   if (!('sequence' in sequenceResult)) {
     return (
-      <section className="folding-screen" aria-labelledby="folding-title">
+      <section
+        className="folding-screen"
+        aria-labelledby="folding-title"
+        aria-describedby="folding-model-boundary"
+      >
         <p className="eyebrow">접기실 · 2D 관계 보기</p>
         <h1 id="folding-title">한 면씩 접기</h1>
         <p className="field-error" role="alert">이 예측한 순서로는 접기 단계를 만들 수 없습니다.</p>

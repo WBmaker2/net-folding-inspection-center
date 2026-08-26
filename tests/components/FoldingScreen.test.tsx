@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { getMissionById } from '../../src/content/missions/catalog';
 import type { PredictionRecord } from '../../src/domain/net/types';
@@ -21,6 +21,19 @@ const prediction: PredictionRecord = {
 const renderFolding = (props: Partial<React.ComponentProps<typeof FoldingScreen>> = {}) => (
   render(<FoldingScreen mission={mission} prediction={prediction} {...props} />)
 );
+
+const predictionFor = (missionId: Parameters<typeof getMissionById>[0]): PredictionRecord => {
+  const selectedMission = getMissionById(missionId);
+  const baseFaceId = selectedMission.baseFaceId;
+  const foldOrder = selectedMission.suggestedFoldOrder;
+  return {
+    baseFaceId,
+    predictedTopFaceId: foldOrder[0]!,
+    foldOrder,
+    arrowByFace: Object.fromEntries(foldOrder.map((faceId) => [faceId, 'north'])),
+    submittedAtIso: '2026-08-26T00:00:00.000Z',
+  } as PredictionRecord;
+};
 
 describe('FoldingScreen', () => {
   it('reveals one fold at a time and keeps previous/next at the boundaries', async () => {
@@ -68,7 +81,8 @@ describe('FoldingScreen', () => {
     const user = userEvent.setup();
     renderFolding();
     const table = screen.getByRole('table', { name: '완성된 면 관계' });
-    expect(within(table).getAllByText('아직 접지 않음')).toHaveLength(16);
+    expect(within(table).getAllByText('아직 접지 않음')).toHaveLength(15);
+    expect(within(table).getByText('아직 확인되지 않음')).toBeInTheDocument();
     expect(within(table).queryByRole('columnheader', { name: '맞은편' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '다음 면 접기' }));
     expect(within(table).getByRole('row', { name: /3번 면/ })).toHaveTextContent('아직 접지 않음');
@@ -117,5 +131,113 @@ describe('FoldingScreen', () => {
     } finally {
       window.matchMedia = originalMatchMedia;
     }
+  });
+
+  it('uses the learner-selected F2 base as the sequence authority through all five steps', async () => {
+    const user = userEvent.setup();
+    const f2Prediction: PredictionRecord = {
+      ...prediction,
+      baseFaceId: 'F2',
+      foldOrder: ['F1', 'F3', 'F5', 'F6', 'F4'],
+    };
+    renderFolding({ prediction: f2Prediction });
+    for (let step = 0; step < 5; step += 1) {
+      await user.click(screen.getByRole('button', { name: '다음 면 접기' }));
+    }
+    expect(screen.getByText('5 / 5면 접힘')).toBeVisible();
+    expect(document.querySelector('tr[data-face-id="F2"]')).toHaveClass('is-base');
+  });
+
+  it('calls completion again only when moving from an earlier step to the final step', async () => {
+    const user = userEvent.setup();
+    const onComplete = vi.fn();
+    renderFolding({ onComplete });
+    for (let step = 0; step < 5; step += 1) {
+      await user.click(screen.getByRole('button', { name: '다음 면 접기' }));
+    }
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: '이전 접기' }));
+    await user.click(screen.getByRole('button', { name: '다음 면 접기' }));
+    expect(onComplete).toHaveBeenCalledTimes(2);
+  });
+
+  it.each(['cube-collision-01', 'cube-collision-02'] as const)(
+    'shows collision status without inventing opposite answers for %s',
+    async (missionId) => {
+      const user = userEvent.setup();
+      const selectedMission = getMissionById(missionId);
+      render(
+        <FoldingScreen
+          mission={selectedMission}
+          prediction={predictionFor(missionId)}
+        />,
+      );
+      for (let step = 0; step < 5; step += 1) {
+        await user.click(screen.getByRole('button', { name: '다음 면 접기' }));
+      }
+      const table = screen.getByRole('table', { name: '완성된 면 관계' });
+      expect(within(table).getAllByText('겹침 확인 필요').length).toBeGreaterThanOrEqual(2);
+      expect(within(table).getAllByRole('cell', { name: '맞은편 관계 없음' }).length).toBeGreaterThanOrEqual(1);
+      expect(within(table).queryByText('아직 확인되지 않음')).not.toBeInTheDocument();
+    },
+  );
+
+  it('connects the model-boundary IDREF in the invalid sequence branch and renders the note', () => {
+    const invalidPrediction: PredictionRecord = { ...prediction, foldOrder: ['F2'] };
+    renderFolding({ prediction: invalidPrediction });
+    const section = screen.getByRole('region', { name: '한 면씩 접기' });
+    expect(section).toHaveAttribute('aria-describedby', 'folding-model-boundary');
+    expect(document.getElementById('folding-model-boundary')).toHaveTextContent('실제 종이의 두께');
+  });
+
+  it('subscribes to matchMedia changes and cleans up the modern listener', async () => {
+    const originalMatchMedia = window.matchMedia;
+    let changeListener: (() => void) | undefined;
+    const mediaQuery = {
+      matches: false,
+      media: '(prefers-reduced-motion: reduce)',
+      addEventListener: vi.fn((_type: string, listener: () => void) => { changeListener = listener; }),
+      removeEventListener: vi.fn(),
+    };
+    const mediaQueryList = mediaQuery as unknown as MediaQueryList;
+    window.matchMedia = vi.fn(() => mediaQueryList);
+    try {
+      const { container } = renderFolding();
+      expect(container.querySelector('[data-motion-mode="smooth"]')).toBeInTheDocument();
+      mediaQuery.matches = true;
+      changeListener?.();
+      await waitFor(() => expect(container.querySelector('[data-motion-mode="instant"]')).toBeInTheDocument());
+      cleanup();
+      expect(mediaQueryList.removeEventListener).toHaveBeenCalled();
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('supports the legacy addListener/removeListener matchMedia fallback', () => {
+    const originalMatchMedia = window.matchMedia;
+    const mediaQuery = {
+      matches: true,
+      media: '(prefers-reduced-motion: reduce)',
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+    } as unknown as MediaQueryList;
+    window.matchMedia = vi.fn(() => mediaQuery);
+    try {
+      const { container } = renderFolding();
+      expect(container.querySelector('[data-motion-mode="instant"]')).toBeInTheDocument();
+      cleanup();
+      expect(mediaQuery.addListener).toHaveBeenCalled();
+      expect(mediaQuery.removeListener).toHaveBeenCalled();
+    } finally {
+      window.matchMedia = originalMatchMedia;
+    }
+  });
+
+  it('keeps the whole learner route in HTML 2D with no canvas or 3D image', () => {
+    const { container } = renderFolding();
+    expect(container.querySelector('canvas')).not.toBeInTheDocument();
+    expect(container.querySelector('img')).not.toBeInTheDocument();
+    expect(screen.getByRole('table', { name: '완성된 면 관계' })).toBeVisible();
   });
 });
