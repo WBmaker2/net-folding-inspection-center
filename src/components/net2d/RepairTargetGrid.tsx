@@ -1,8 +1,9 @@
-import type { GridPoint, NetDefinition } from '../../domain/net/types';
+import type { FaceId, GridPoint, NetDefinition } from '../../domain/net/types';
 import { FaceTile } from './FaceTile';
 
 export interface RepairTargetGridProps {
   readonly net: NetDefinition;
+  readonly selectedFaceId?: FaceId | null;
   readonly targets: readonly GridPoint[];
   readonly selectedTarget?: GridPoint | null;
   readonly onTargetSelect: (target: GridPoint) => void;
@@ -16,12 +17,14 @@ const samePoint = (left: GridPoint, right: GridPoint): boolean => (
 
 export function RepairTargetGrid({
   net,
+  selectedFaceId = null,
   targets,
   selectedTarget = null,
   onTargetSelect,
   label = '이동 후보 격자',
 }: RepairTargetGridProps): React.JSX.Element {
   const occupied = new Map(net.faces.map((face) => [pointKey(face.grid), face] as const));
+  const selectedFace = net.faces.find((face) => face.id === selectedFaceId);
   const targetKeys = new Set(targets.map(pointKey));
   const coordinates = [...net.faces.map((face) => face.grid), ...targets];
   const minX = Math.min(...coordinates.map((point) => point.x));
@@ -49,7 +52,7 @@ export function RepairTargetGrid({
             <button
               type="button"
               className={`repair-target-cell${selected ? ' is-selected' : ''}`}
-              aria-label={`빈 칸 ${pointText(point)}, 선택한 면의 이동 후보`}
+              aria-label={`빈 칸 ${pointText(point)}, ${relativeText(selectedFace?.grid, point)}, 이동 후보`}
               aria-pressed={selected}
               data-grid-x={point.x}
               data-grid-y={point.y}
@@ -81,3 +84,11 @@ export function RepairTargetGrid({
 }
 
 const pointText = (point: GridPoint): string => `(${point.x}, ${point.y})`;
+
+const relativeText = (from: GridPoint | undefined, to: GridPoint): string => {
+  if (from === undefined) return '선택한 면과의 위치';
+  const horizontal = to.x > from.x ? '오른쪽' : to.x < from.x ? '왼쪽' : '';
+  const vertical = to.y > from.y ? '아래쪽' : to.y < from.y ? '위쪽' : '';
+  return horizontal && vertical ? `선택한 면 기준 ${vertical} ${horizontal}`
+    : `선택한 면 기준 ${horizontal || vertical || '같은 위치'}`;
+};

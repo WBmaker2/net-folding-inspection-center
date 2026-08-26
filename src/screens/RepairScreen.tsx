@@ -161,6 +161,7 @@ function RepairScreenContent({
         ) : (
           <RepairTargetGrid
             net={decorationPreviewNet}
+            selectedFaceId={selectedFaceId}
             targets={targets}
             selectedTarget={target}
             onTargetSelect={chooseTarget}
