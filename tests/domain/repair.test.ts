@@ -30,6 +30,7 @@ describe('repair geometry', () => {
       acceptedForMission.forEach((key) => acceptedKeys.add(`${mission.id}:${key}`));
     });
     expect(acceptedKeys.size).toBeGreaterThan(2);
+    expect(acceptedKeys).toContain('cube-repair-01:F5:2,0');
   });
 
   it('accepts each catalog repair without mutating or sharing mutable data', () => {
