@@ -345,8 +345,10 @@ const isReachableProgress = (
     };
     const evaluation = evaluateEvidenceSubmission(mission, evidence, contextInput);
     const generated = expectedEvidenceSentence(mission, evidence, evaluation.context);
-    return generated !== null && evaluation.termsMatch
-      && evaluation.pairMatches && generated.length > 0;
+    const termsAreStructured = persistedEvidence.selectedTerms.length === 2
+      && new Set(persistedEvidence.selectedTerms).size === 2
+      && persistedEvidence.selectedTerms.every((term) => mission.targetVocabulary.includes(term));
+    return generated !== null && termsAreStructured && evaluation.pairMatches;
   });
   if (!evidenceAttemptsAreStructured) return false;
   if (stage === 'folding') {

@@ -1,5 +1,5 @@
 import { getMissionById } from '../../content/missions/catalog';
-import { evaluateDiagnosis } from './diagnosis';
+import { evaluateDiagnosis, validationMatches } from './diagnosis';
 import { evaluateRepair } from './repair';
 import type { CubeValidationResult } from '../net/validateCubeNet';
 import { validateCubeNet } from '../net/validateCubeNet';
@@ -25,6 +25,7 @@ export interface EvidenceSentenceValues {
 
 export interface EvidenceContextInput {
   readonly baseFaceId?: FaceId;
+  /** The fold-result validation shown before repair; it is never trusted. */
   readonly validation?: CubeValidationResult;
   readonly diagnosis?: DiagnosisSubmission | null;
   readonly repair?: RepairSubmission | null;
@@ -93,6 +94,22 @@ export const normalizeEvidenceSubmission = (
 const GEOMETRY_TERMS: readonly GeometryTerm[] = [
   '맞은편', '모서리', '면', '접는 방향', '겹침', '빈 면',
 ];
+
+/** Canonical order is [relationship/outcome term2, path/cause term1]. */
+export const CANONICAL_EVIDENCE_TERMS: Readonly<Record<MissionId, readonly [GeometryTerm, GeometryTerm]>> = {
+  'cube-track-01': ['맞은편', '접는 방향'],
+  'cube-track-02': ['맞은편', '접는 방향'],
+  'cube-opposite-01': ['맞은편', '접는 방향'],
+  'cube-opposite-02': ['맞은편', '접는 방향'],
+  'cube-collision-01': ['겹침', '면'],
+  'cube-collision-02': ['겹침', '면'],
+  'cube-repair-01': ['면', '겹침'],
+  'cube-repair-02': ['맞은편', '겹침'],
+};
+
+export const canonicalEvidenceTermsFor = (
+  mission: MissionDefinition,
+): readonly [GeometryTerm, GeometryTerm] => CANONICAL_EVIDENCE_TERMS[mission.id];
 
 const faceText = (faceId: FaceId): string => `${Number(faceId.slice(1))}번 면`;
 const samePair = (left: OppositePair, right: OppositePair): boolean => (
@@ -183,6 +200,8 @@ export const getEvidenceContext = (
 ): EvidenceContext => {
   const baseFaceId = input.baseFaceId ?? mission.baseFaceId;
   const validation = validateCubeNet(mission.net, baseFaceId);
+  const suppliedValidationMatches = input.validation === undefined
+    || validationMatches(input.validation, validation);
   const pairCandidates = validation.oppositePairs.map(canonicalPair);
   const diagnosisCorrect = input.diagnosis === undefined || input.diagnosis === null
     ? mission.kind === 'opposite'
@@ -202,7 +221,8 @@ export const getEvidenceContext = (
       validation,
       pairCandidates,
       ...(collisionPair === undefined ? {} : { collisionPair }),
-      prerequisitesCorrect: validation.reason === 'overlap' && pairMatchesDiagnosis,
+      prerequisitesCorrect: suppliedValidationMatches
+        && validation.reason === 'overlap' && pairMatchesDiagnosis,
     };
   }
   if (mission.kind === 'repair') {
@@ -220,7 +240,8 @@ export const getEvidenceContext = (
       validation: repairedValidation ?? validation,
       pairCandidates: repairedPairs,
       ...(repairFaceId === undefined ? {} : { repairFaceId }),
-      prerequisitesCorrect: diagnosisCorrect && repairEvaluation?.accepted === true
+      prerequisitesCorrect: suppliedValidationMatches
+        && diagnosisCorrect && repairEvaluation?.accepted === true
         && repairedPairs.some((pair) => pairHasFace(pair, baseFaceId)) === true,
     };
   }
@@ -229,7 +250,7 @@ export const getEvidenceContext = (
     baseFaceId,
     validation,
     pairCandidates,
-    prerequisitesCorrect: diagnosisCorrect && validation.isValid
+    prerequisitesCorrect: suppliedValidationMatches && diagnosisCorrect && validation.isValid
       && (expectedPair === undefined || pairCandidates.some((pair) => samePair(pair, expectedPair))),
   };
 };
@@ -297,9 +318,9 @@ export const evaluateEvidenceSubmission = (
       && context.pairCandidates.some((candidate) => samePair(candidate, submission.oppositePair!));
   const answerPairMatches = expectedPair !== undefined && pair !== undefined
     && samePair(pair, expectedPair);
-  const termsMatch = submission.selectedTerms.length === 2
-    && new Set(submission.selectedTerms).size === 2
-    && submission.selectedTerms.every((term) => mission.targetVocabulary.includes(term));
+  const canonicalTerms = canonicalEvidenceTermsFor(mission);
+  const termsMatch = submission.selectedTerms.length === canonicalTerms.length
+    && submission.selectedTerms.every((term, index) => term === canonicalTerms[index]);
   const sentence = expectedEvidenceSentence(mission, submission, context);
   return {
     isCorrect: context.prerequisitesCorrect && answerPairMatches && termsMatch

@@ -39,4 +39,39 @@ describe('EvidenceScreen', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('기록하지 못했습니다');
     expect(screen.queryByRole('button', { name: '미션 완료 확인' })).not.toBeInTheDocument();
   });
+
+  it('pulses one critical button at a time and guards repeated callbacks', async () => {
+    const user = userEvent.setup();
+    const mission = getMissionById('cube-opposite-01');
+    const onSubmit = vi.fn();
+    const onComplete = vi.fn();
+    render(<EvidenceScreen mission={mission} onSubmit={onSubmit} onComplete={onComplete} />);
+    await user.click(screen.getByRole('button', { name: '1번 면' }));
+    await user.click(screen.getByRole('button', { name: '3번 면' }));
+    await user.selectOptions(screen.getByLabelText('첫 번째 기하 낱말'), '맞은편');
+    await user.selectOptions(screen.getByLabelText('두 번째 기하 낱말'), '접는 방향');
+    expect(document.querySelectorAll('.gi-pulse')).toHaveLength(1);
+    await user.dblClick(screen.getByRole('button', { name: '근거 확인' }));
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(document.querySelectorAll('.gi-pulse')).toHaveLength(1);
+    await user.dblClick(screen.getByRole('button', { name: '미션 완료 확인' }));
+    expect(onComplete).toHaveBeenCalledTimes(1);
+    expect(document.querySelectorAll('.gi-pulse')).toHaveLength(0);
+    expect(screen.getByRole('button', { name: '미션 완료 확인' })).toBeDisabled();
+  });
+
+  it('does not submit when the supplied validation is stale', async () => {
+    const user = userEvent.setup();
+    const mission = getMissionById('cube-opposite-01');
+    const stale = { ...validateCubeNet(mission.net, 'F1'), missingNormals: ['+x'] } as ReturnType<typeof validateCubeNet>;
+    const onSubmit = vi.fn();
+    render(<EvidenceScreen mission={mission} validation={stale} onSubmit={onSubmit} />);
+    await user.click(screen.getByRole('button', { name: '1번 면' }));
+    await user.click(screen.getByRole('button', { name: '3번 면' }));
+    await user.selectOptions(screen.getByLabelText('첫 번째 기하 낱말'), '맞은편');
+    await user.selectOptions(screen.getByLabelText('두 번째 기하 낱말'), '접는 방향');
+    await user.click(screen.getByRole('button', { name: '근거 확인' }));
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByRole('alert')).toHaveTextContent('검사 결과를 확인할 수 없어');
+  });
 });

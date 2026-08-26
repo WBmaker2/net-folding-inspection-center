@@ -19,6 +19,7 @@ import '../styles/evidence.css';
 
 export interface EvidenceScreenProps {
   readonly mission: MissionDefinition;
+  /** Pre-repair fold result; the domain recomputes the repaired result separately. */
   readonly validation?: CubeValidationResult;
   readonly baseFaceId?: FaceId;
   readonly diagnosis?: DiagnosisSubmission | null;
@@ -48,6 +49,7 @@ export function EvidenceScreen({
   const [relationshipTerm, setRelationshipTerm] = useState<GeometryTerm | ''>('');
   const [pathTerm, setPathTerm] = useState<GeometryTerm | ''>('');
   const [submitted, setSubmitted] = useState<EvidenceSubmission | null>(null);
+  const [completed, setCompleted] = useState(false);
   const [completeError, setCompleteError] = useState('');
   const [submitError, setSubmitError] = useState('');
   const context = useMemo(() => getEvidenceContext(mission, {
@@ -95,6 +97,7 @@ export function EvidenceScreen({
   const chooseFace = (faceId: FaceId): void => {
     setSubmitError('');
     setSubmitted(null);
+    setCompleted(false);
     setCompleteError('');
     setSelectedFaces((current) => current.includes(faceId)
       ? current.filter((candidate) => candidate !== faceId)
@@ -102,11 +105,16 @@ export function EvidenceScreen({
   };
 
   const submit = (): void => {
-    if (draft === null || preview === null) return;
+    if (draft === null || preview === null || submitted !== null) return;
+    if (!context.prerequisitesCorrect) {
+      setSubmitError('접기 검사 결과를 확인할 수 없어 근거를 기록하지 않았습니다. 다시 불러와 주세요.');
+      return;
+    }
     const evidence: EvidenceSubmission = { ...draft, completedSentence: preview };
     try {
       onSubmit(evidence);
       setSubmitted(evidence);
+      setCompleted(false);
       setSubmitError('');
     } catch {
       setSubmitError('근거를 기록하지 못했습니다. 선택을 확인한 뒤 다시 시도해 주세요.');
@@ -115,9 +123,10 @@ export function EvidenceScreen({
 
   const complete = (): void => {
     const callback = onCompleteMission ?? onCompletion ?? onComplete;
-    if (!isCorrectDraft || submitted === null || callback === undefined) return;
+    if (!isCorrectDraft || submitted === null || completed || callback === undefined) return;
     try {
       callback();
+      setCompleted(true);
       setCompleteError('');
     } catch {
       setCompleteError('완료 기록을 저장하지 못했습니다. 다시 시도해 주세요.');
@@ -160,7 +169,7 @@ export function EvidenceScreen({
         <select
           id="evidence-term-relationship"
           value={relationshipTerm}
-          onChange={(event) => { setRelationshipTerm(event.target.value as GeometryTerm); setSubmitted(null); }}
+          onChange={(event) => { setRelationshipTerm(event.target.value as GeometryTerm); setSubmitted(null); setCompleted(false); setSubmitError(''); }}
         >
           <option value="">고르기</option>
           {terms.filter((term) => mission.targetVocabulary.includes(term)).map((term) => (
@@ -171,7 +180,7 @@ export function EvidenceScreen({
         <select
           id="evidence-term-path"
           value={pathTerm}
-          onChange={(event) => { setPathTerm(event.target.value as GeometryTerm); setSubmitted(null); }}
+          onChange={(event) => { setPathTerm(event.target.value as GeometryTerm); setSubmitted(null); setCompleted(false); setSubmitError(''); }}
         >
           <option value="">고르기</option>
           {terms.filter((term) => mission.targetVocabulary.includes(term)).map((term) => (
@@ -193,17 +202,23 @@ export function EvidenceScreen({
       )}
       <button
         type="button"
-        className="evidence-submit gi-pulse"
+        className={submitted === null ? 'evidence-submit gi-pulse' : 'evidence-submit'}
         disabled={draft === null || preview === null}
         onClick={submit}
       >
         근거 확인
       </button>
       {submitted !== null && isCorrectDraft && (
-        <button type="button" className="evidence-complete gi-pulse" onClick={complete}>
+        <button
+          type="button"
+          className={completed ? 'evidence-complete' : 'evidence-complete gi-pulse'}
+          disabled={completed}
+          onClick={complete}
+        >
           미션 완료 확인
         </button>
       )}
+      {completed && <p className="field-success" role="status">미션 완료를 기록했습니다.</p>}
       {completeError && <p className="field-error" role="alert">{completeError}</p>}
       <p className="evidence-selection-status" role="status">
         {selectedPair === undefined ? '면 관계를 선택 중입니다.' : `${selectedPair.a}·${selectedPair.b} 관계를 골랐습니다.`}

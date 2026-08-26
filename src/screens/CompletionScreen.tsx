@@ -35,7 +35,7 @@ const pairText = (pair: { readonly a: string; readonly b: string } | undefined):
   pair === undefined ? '아직 선택하지 않음' : `${pair.a}·${pair.b}`
 );
 const diagnosisText = (value: DiagnosisSubmission | undefined): string => (
-  value === undefined ? '아직 시도하지 않음' : `${value.selectedErrorType} · ${value.selectedFaceIds.join('·') || '면 없음'}`
+  value === undefined ? '아직 시도하지 않음' : `${value.selectedErrorType} · ${value.selectedFaceIds.join('·') || '면 없음'}${value.selectedMissingDirection === undefined ? '' : ` · 비어 있는 방향: ${value.selectedMissingDirection}`}`
 );
 const repairText = (value: RepairSubmission | undefined): string => (
   value === undefined ? '아직 시도하지 않음' : `${value.faceId} → (${value.target.x}, ${value.target.y})${value.accepted ? ' · 수용됨' : ' · 다시 살펴봄'}`
