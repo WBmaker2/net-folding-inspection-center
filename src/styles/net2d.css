@@ -169,9 +169,132 @@
   border: 0;
 }
 
+.folding-screen {
+  width: min(100%, 58rem);
+}
+
+.folding-intro {
+  margin-bottom: 0.5rem;
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.folding-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-block: 1.25rem 0.75rem;
+  padding: 0.8rem 1rem;
+  border-left: 0.35rem solid var(--accent);
+  background: var(--surface);
+}
+
+.fold-live-region {
+  margin: 0;
+  color: var(--muted-ink);
+}
+
+.folding-controls,
+.folding-options {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+  margin-block: 0.75rem;
+}
+
+.folding-controls button,
+.folding-options button {
+  min-width: 7rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.8rem;
+  border: 2px solid var(--line);
+  border-radius: 0.6rem;
+  color: var(--ink);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.folding-controls button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.folding-controls input[type='range'] {
+  min-width: min(16rem, 55vw);
+  accent-color: var(--accent);
+}
+
+.folding-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+}
+
+.face-relation-table {
+  width: 100%;
+  margin-top: 1.25rem;
+  border-collapse: collapse;
+  background: var(--surface);
+}
+
+.face-relation-table caption {
+  margin-bottom: 0.5rem;
+  color: var(--ink);
+  font-size: 1.15rem;
+  font-weight: 900;
+  text-align: left;
+}
+
+.face-relation-table th,
+.face-relation-table td {
+  padding: 0.7rem 0.6rem;
+  border: 1px solid var(--line);
+  text-align: left;
+}
+
+.face-relation-table tbody tr.is-base {
+  border-left: 0.35rem solid var(--accent);
+}
+
+.face-relation-table tbody tr.is-focused {
+  background: var(--accent-soft);
+  font-weight: 900;
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.face-relation-table tbody tr.is-unsettled {
+  color: var(--muted-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .folding-screen,
+  .face-relation-table tbody tr {
+    transition: none;
+    animation: none;
+  }
+}
+
 @media (max-width: 520px) {
   .prediction-order-list li {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .folding-state {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .face-relation-table {
+    font-size: 0.86rem;
+  }
+
+  .face-relation-table th,
+  .face-relation-table td {
+    padding: 0.55rem 0.35rem;
   }
 }
