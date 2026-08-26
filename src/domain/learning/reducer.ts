@@ -16,6 +16,7 @@ import type {
 } from './types';
 
 const FOLD_STEP_COUNT = 5;
+const FOLD_DIRECTIONS = ['north', 'east', 'south', 'west'] as const;
 const AXIS_DIRECTIONS: readonly AxisDirection[] = ['+x', '-x', '+y', '-y', '+z', '-z'];
 const DIAGNOSIS_TYPES = ['overlap', 'missing-face', 'decoration-direction'] as const;
 const GEOMETRY_TERMS = ['맞은편', '모서리', '면', '접는 방향', '겹침', '빈 면'] as const;
@@ -162,6 +163,12 @@ const assertMissionScope = (
 };
 
 const isFaceId = (value: unknown): value is FaceId => FACE_IDS.includes(value as FaceId);
+const isRecord = (value: unknown): value is Record<string, unknown> => (
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+);
+const isFoldDirection = (value: unknown): value is typeof FOLD_DIRECTIONS[number] => (
+  FOLD_DIRECTIONS.includes(value as typeof FOLD_DIRECTIONS[number])
+);
 const isAxisDirection = (value: unknown): value is AxisDirection => (
   AXIS_DIRECTIONS.includes(value as AxisDirection)
 );
@@ -202,7 +209,20 @@ const validatePrediction = (
   if (!isFaceId(value.predictedTopFaceId)) {
     throw transitionError(state, action, 'The predicted top face is not a face in the cube net');
   }
-  if (value.arrowByFace === null || typeof value.arrowByFace !== 'object') {
+  if (!isRecord(value.arrowByFace)) {
+    throw transitionError(state, action, 'The prediction fold directions are invalid');
+  }
+  const movingFaceIds = missionFaces.filter((faceId) => faceId !== mission.baseFaceId);
+  const arrowKeys = Reflect.ownKeys(value.arrowByFace);
+  if (arrowKeys.length !== movingFaceIds.length
+    || arrowKeys.some((key) => typeof key !== 'string')
+    || arrowKeys.some((key) => (
+      !isFaceId(key) || key === mission.baseFaceId || !movingFaceIds.includes(key)
+    ))
+    || movingFaceIds.some((faceId) => !Object.prototype.hasOwnProperty.call(value.arrowByFace, faceId))) {
+    throw transitionError(state, action, 'The prediction must define one direction for each moving face');
+  }
+  if (movingFaceIds.some((faceId) => !isFoldDirection(value.arrowByFace[faceId]))) {
     throw transitionError(state, action, 'The prediction fold directions are invalid');
   }
   if (typeof value.submittedAtIso !== 'string' || value.submittedAtIso.trim().length === 0) {

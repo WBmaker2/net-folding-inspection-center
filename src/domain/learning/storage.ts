@@ -63,19 +63,52 @@ const integerPoint = (value: unknown): value is GridPoint => (
   && Number.isSafeInteger(value.x)
   && Number.isSafeInteger(value.y)
 );
+const movingFacesFor = (mission: MissionDefinition): readonly FaceId[] => (
+  mission.net.faces
+    .map((face) => face.id)
+    .filter((faceId) => faceId !== mission.baseFaceId)
+);
 
-const sanitizePrediction = (value: unknown): PredictionRecord | null => {
-  if (!isRecord(value) || !isFaceId(value.baseFaceId) || !isFaceId(value.predictedTopFaceId)
-    || !Array.isArray(value.foldOrder) || value.foldOrder.length !== 5
-    || !value.foldOrder.every(isFaceId) || !uniqueFaces(value.foldOrder)
-    || !isRecord(value.arrowByFace) || typeof value.submittedAtIso !== 'string'
-    || value.submittedAtIso.trim().length === 0) return null;
-  const arrowByFace: Partial<Record<FaceId, FoldDirection>> = {};
-  for (const faceId of FACE_IDS) {
-    const direction = value.arrowByFace[faceId];
-    if (direction !== undefined && !isFoldDirection(direction)) return null;
-    if (direction !== undefined) arrowByFace[faceId] = direction;
+const sanitizeArrowByFace = (
+  value: unknown,
+  mission: MissionDefinition,
+): Partial<Record<FaceId, FoldDirection>> | null => {
+  if (!isRecord(value)) return null;
+  const movingFaceIds = movingFacesFor(mission);
+  const keys = Reflect.ownKeys(value);
+  if (keys.length !== movingFaceIds.length || keys.some((key) => typeof key !== 'string')) {
+    return null;
   }
+  if (keys.some((key) => {
+    if (typeof key !== 'string' || !isFaceId(key)) return true;
+    return key === mission.baseFaceId || !movingFaceIds.includes(key);
+  })) return null;
+  if (movingFaceIds.some((faceId) => !Object.prototype.hasOwnProperty.call(value, faceId))) {
+    return null;
+  }
+  const arrowByFace: Partial<Record<FaceId, FoldDirection>> = {};
+  for (const faceId of movingFaceIds) {
+    const direction = value[faceId];
+    if (!isFoldDirection(direction)) return null;
+    arrowByFace[faceId] = direction;
+  }
+  return arrowByFace;
+};
+
+const sanitizePrediction = (
+  value: unknown,
+  mission: MissionDefinition,
+): PredictionRecord | null => {
+  const movingFaceIds = movingFacesFor(mission);
+  if (!isRecord(value) || !isFaceId(value.baseFaceId) || !isFaceId(value.predictedTopFaceId)
+    || value.baseFaceId !== mission.baseFaceId
+    || !Array.isArray(value.foldOrder) || value.foldOrder.length !== movingFaceIds.length
+    || !value.foldOrder.every(isFaceId) || !uniqueFaces(value.foldOrder)
+    || !value.foldOrder.every((faceId) => movingFaceIds.includes(faceId))
+    || typeof value.submittedAtIso !== 'string'
+    || value.submittedAtIso.trim().length === 0) return null;
+  const arrowByFace = sanitizeArrowByFace(value.arrowByFace, mission);
+  if (arrowByFace === null) return null;
   return {
     baseFaceId: value.baseFaceId,
     predictedTopFaceId: value.predictedTopFaceId,
@@ -160,10 +193,15 @@ const sanitizePersistedEvidence = (value: unknown): PersistedEvidenceSubmission 
   };
 };
 
-const sanitizePersistedAttempts = (value: unknown): PersistedLearningAttempts | null => {
+const sanitizePersistedAttempts = (
+  value: unknown,
+  mission: MissionDefinition | null,
+): PersistedLearningAttempts | null => {
   if (!isRecord(value) || !Array.isArray(value.predictions) || !Array.isArray(value.diagnoses)
     || !Array.isArray(value.repairs) || !Array.isArray(value.evidence)) return null;
-  const predictions = value.predictions.map(sanitizePrediction);
+  const predictions = mission === null
+    ? value.predictions.map(() => null)
+    : value.predictions.map((prediction) => sanitizePrediction(prediction, mission));
   const diagnoses = value.diagnoses.map(sanitizeDiagnosis);
   const repairs = value.repairs.map(sanitizeRepair);
   const evidence = value.evidence.map(sanitizePersistedEvidence);
@@ -175,12 +213,6 @@ const sanitizePersistedAttempts = (value: unknown): PersistedLearningAttempts | 
     evidence: evidence as PersistedEvidenceSubmission[],
   };
 };
-
-const movingFacesFor = (mission: MissionDefinition): readonly FaceId[] => (
-  mission.net.faces
-    .map((face) => face.id)
-    .filter((faceId) => faceId !== mission.baseFaceId)
-);
 
 const predictionMatchesMission = (
   prediction: PredictionRecord,
@@ -234,6 +266,15 @@ const attemptsAreEmpty = (attempts: PersistedLearningAttempts): boolean => (
   && attempts.repairs.length === 0
   && attempts.evidence.length === 0
 );
+/** Sanitizers emit deterministic key order, so JSON is a stable structural comparison here. */
+const structurallyEqual = (left: unknown, right: unknown): boolean => (
+  JSON.stringify(left) === JSON.stringify(right)
+);
+
+const matchesLastAttempt = <T>(current: T | null, attempts: readonly T[]): boolean => (
+  current === null
+  || (attempts.length > 0 && structurallyEqual(current, attempts[attempts.length - 1]))
+);
 
 const isReachableProgress = (
   missionId: MissionId | null,
@@ -258,13 +299,18 @@ const isReachableProgress = (
   if (stage === 'intake' || prediction !== null && !predictionMatchesMission(prediction, mission)) {
     return false;
   }
-  if (stage !== 'prediction' && prediction === null) return false;
   if (stage === 'prediction') {
     return prediction === null
       && foldStepIndex === 0
-      && hasNoReviewData(diagnosis, repair, evidence);
+      && hasNoReviewData(diagnosis, repair, evidence)
+      && attemptsAreEmpty(attempts);
   }
-  if (prediction === null) return false;
+  if (prediction === null
+    || attempts.predictions.length === 0
+    || !structurallyEqual(prediction, attempts.predictions[attempts.predictions.length - 1])
+    || !matchesLastAttempt(diagnosis, attempts.diagnoses)
+    || !matchesLastAttempt(repair, attempts.repairs)
+    || !matchesLastAttempt(evidence, attempts.evidence)) return false;
   if (stage === 'folding') {
     return foldStepIndex >= 0 && foldStepIndex < 5
       && hasNoReviewData(diagnosis, repair, evidence);
@@ -272,6 +318,9 @@ const isReachableProgress = (
   if (foldStepIndex !== 5) return false;
 
   const diagnosticMission = mission.kind === 'collision' || mission.kind === 'repair';
+  if (!diagnosticMission && (attempts.diagnoses.length > 0 || attempts.repairs.length > 0)) {
+    return false;
+  }
   if (stage === 'diagnosis') {
     return diagnosticMission && repair === null && evidence === null
       && (diagnosis === null || !diagnosisIsCorrect(mission, diagnosis));
@@ -289,7 +338,8 @@ const isReachableProgress = (
       return false;
     }
     if (stage === 'complete') {
-      return evidence !== null && completedMissionIds.includes(missionId);
+      return evidence !== null && attempts.evidence.length > 0
+        && completedMissionIds.includes(missionId);
     }
     return true;
   }
@@ -307,13 +357,17 @@ export const sanitizePersistedProgress = (value: unknown): PersistedProgress | n
     || !Array.isArray(value.completedMissionIds)
     || !value.completedMissionIds.every(isMissionId)) return null;
 
-  const prediction = value.prediction === null ? null : sanitizePrediction(value.prediction);
+  const missionId = value.missionId as MissionId | null;
+  const mission = missionId === null ? null : getMissionById(missionId);
+  const prediction = value.prediction === null
+    ? null
+    : mission === null ? null : sanitizePrediction(value.prediction, mission);
   const diagnosis = value.diagnosis === null ? null : sanitizeDiagnosis(value.diagnosis);
   const repair = value.repair === null ? null : sanitizeRepair(value.repair);
   const evidence = value.evidence === null
     ? null
     : sanitizePersistedEvidence(value.evidence);
-  const attempts = sanitizePersistedAttempts(value.attempts);
+  const attempts = sanitizePersistedAttempts(value.attempts, mission);
   if ((value.prediction !== null && prediction === null)
     || (value.diagnosis !== null && diagnosis === null)
     || (value.repair !== null && repair === null)
@@ -323,7 +377,7 @@ export const sanitizePersistedProgress = (value: unknown): PersistedProgress | n
   const completedMissionIds = value.completedMissionIds as MissionId[];
   if (new Set(completedMissionIds).size !== completedMissionIds.length
     || !isReachableProgress(
-      value.missionId,
+      missionId,
       value.stage,
       prediction,
       value.foldStepIndex,
@@ -336,7 +390,7 @@ export const sanitizePersistedProgress = (value: unknown): PersistedProgress | n
 
   return {
     version: 1,
-    missionId: value.missionId,
+    missionId,
     stage: value.stage,
     prediction,
     foldStepIndex: value.foldStepIndex,

@@ -64,6 +64,42 @@ const progressedState = () => {
   });
 };
 
+const collisionDiagnosis = {
+  selectedErrorType: 'overlap' as const,
+  selectedFaceIds: ['F2', 'F6'] as const,
+  selectedMissingDirection: '+x' as const,
+};
+
+const collisionFoldedState = () => learningReducer(
+  learningReducer(
+    learningReducer(createInitialLearningState(), {
+      type: 'SELECT_MISSION',
+      missionId: 'cube-collision-01',
+    }),
+    { type: 'SUBMIT_PREDICTION', prediction },
+  ),
+  { type: 'SET_FOLD_STEP', stepIndex: 5 },
+);
+
+const collisionRepairState = () => learningReducer(collisionFoldedState(), {
+  type: 'SUBMIT_DIAGNOSIS',
+  diagnosis: collisionDiagnosis,
+});
+
+const collisionEvidenceState = () => learningReducer(
+  learningReducer(collisionRepairState(), {
+    type: 'SUBMIT_REPAIR',
+    repair: { faceId: 'F6', target: { x: 2, y: 1 }, accepted: true },
+  }),
+  {
+    type: 'SUBMIT_EVIDENCE',
+    evidence: {
+      selectedTerms: ['모서리', '겹침'],
+      completedSentence: '두 면은 같은 모서리에서 겹칩니다.',
+    },
+  },
+);
+
 describe('progress storage', () => {
   it('keeps the default memory store in memory only', () => {
     const store = createMemoryProgressStore();
@@ -164,6 +200,170 @@ describe('progress storage', () => {
     expect(progress).not.toHaveProperty('email');
     expect(progress).not.toHaveProperty('freeText');
     expect(JSON.stringify(progress)).not.toMatch(/completedSentence/u);
+  });
+
+  it('requires an exact moving-face arrow map in current and attempted predictions', () => {
+    const valid = toPersistedProgress(progressedState());
+    const missingFace = Object.fromEntries(
+      Object.entries(prediction.arrowByFace).filter(([faceId]) => faceId !== 'F4'),
+    );
+    const invalidArrowMaps: readonly unknown[] = [
+      { ...prediction.arrowByFace, F1: 'north' },
+      missingFace,
+      { ...prediction.arrowByFace, F7: 'north' },
+      { ...prediction.arrowByFace, F4: 'diagonal' },
+    ];
+
+    invalidArrowMaps.forEach((arrowByFace) => {
+      const invalidPrediction = { ...prediction, arrowByFace };
+      expect(sanitizePersistedProgress({
+        ...valid,
+        prediction: invalidPrediction,
+      })).toBeNull();
+      expect(sanitizePersistedProgress({
+        ...valid,
+        attempts: {
+          ...valid.attempts,
+          predictions: [invalidPrediction],
+        },
+      })).toBeNull();
+    });
+  });
+
+  it('requires prediction stage current and attempts to be completely empty', () => {
+    const selected = learningReducer(createInitialLearningState(), {
+      type: 'SELECT_MISSION',
+      missionId: 'cube-track-01',
+    });
+    const valid = toPersistedProgress(selected);
+
+    expect(sanitizePersistedProgress(valid)).not.toBeNull();
+    expect(sanitizePersistedProgress({ ...valid, prediction })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...valid,
+      attempts: { ...valid.attempts, predictions: [prediction] },
+    })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...valid,
+      diagnosis: {
+        selectedErrorType: 'overlap',
+        selectedFaceIds: ['F2'],
+      },
+    })).toBeNull();
+  });
+
+  it('requires the current prediction to match the last prediction attempt', () => {
+    const valid = toPersistedProgress(progressedState());
+
+    expect(sanitizePersistedProgress({
+      ...valid,
+      attempts: { ...valid.attempts, predictions: [] },
+    })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...valid,
+      prediction: { ...prediction, predictedTopFaceId: 'F2' },
+    })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...valid,
+      attempts: {
+        ...valid.attempts,
+        predictions: [{ ...prediction, predictedTopFaceId: 'F2' }],
+      },
+    })).toBeNull();
+  });
+
+  it('requires current diagnosis and repair records to match their last attempts', () => {
+    const diagnosed = toPersistedProgress(collisionRepairState());
+    expect(sanitizePersistedProgress(diagnosed)).not.toBeNull();
+    expect(sanitizePersistedProgress({
+      ...diagnosed,
+      diagnosis: { ...collisionDiagnosis, selectedMissingDirection: '-x' },
+    })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...diagnosed,
+      attempts: {
+        ...diagnosed.attempts,
+        diagnoses: [{ ...collisionDiagnosis, selectedMissingDirection: '-x' }],
+      },
+    })).toBeNull();
+
+    const rejectedRepair = learningReducer(collisionRepairState(), {
+      type: 'SUBMIT_REPAIR',
+      repair: { faceId: 'F6', target: { x: 2, y: 1 }, accepted: false },
+    });
+    const rejected = toPersistedProgress(rejectedRepair);
+    expect(sanitizePersistedProgress(rejected)).not.toBeNull();
+    expect(sanitizePersistedProgress({
+      ...rejected,
+      repair: { ...rejected.repair!, target: { x: 3, y: 1 } },
+    })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...rejected,
+      attempts: {
+        ...rejected.attempts,
+        repairs: [{ ...rejected.repair!, target: { x: 3, y: 1 } }],
+      },
+    })).toBeNull();
+  });
+
+  it('requires current evidence to match the last evidence attempt', () => {
+    const evidenced = toPersistedProgress(collisionEvidenceState());
+    expect(sanitizePersistedProgress(evidenced)).not.toBeNull();
+    expect(sanitizePersistedProgress({
+      ...evidenced,
+      evidence: { selectedTerms: ['면'] },
+    })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...evidenced,
+      attempts: {
+        ...evidenced.attempts,
+        evidence: [{ selectedTerms: ['면'] }],
+      },
+    })).toBeNull();
+  });
+
+  it('requires complete evidence to have a matching evidence attempt', () => {
+    const complete = learningReducer(collisionEvidenceState(), {
+      type: 'COMPLETE_MISSION',
+    });
+    const persisted = toPersistedProgress(complete);
+    expect(sanitizePersistedProgress(persisted)).not.toBeNull();
+    expect(sanitizePersistedProgress({
+      ...persisted,
+      attempts: { ...persisted.attempts, evidence: [] },
+    })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...persisted,
+      evidence: { selectedTerms: ['면'] },
+    })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...persisted,
+      attempts: {
+        ...persisted.attempts,
+        evidence: [{ selectedTerms: ['면'] }],
+      },
+    })).toBeNull();
+  });
+
+  it('accepts return-to-fold payloads with cleared current review and preserved attempts', () => {
+    const returned = learningReducer(collisionEvidenceState(), {
+      type: 'RETURN_TO_FOLD_STEP',
+      stepIndex: 2,
+    });
+    const persisted = toPersistedProgress(returned);
+
+    expect(sanitizePersistedProgress(persisted)).not.toBeNull();
+    expect(persisted).toMatchObject({
+      stage: 'folding',
+      foldStepIndex: 2,
+      diagnosis: null,
+      repair: null,
+      evidence: null,
+    });
+    expect(persisted.attempts.predictions).toHaveLength(1);
+    expect(persisted.attempts.diagnoses).toHaveLength(1);
+    expect(persisted.attempts.repairs).toHaveLength(1);
+    expect(persisted.attempts.evidence).toHaveLength(1);
   });
 
   it('strips the completed sentence from current and attempted evidence', () => {

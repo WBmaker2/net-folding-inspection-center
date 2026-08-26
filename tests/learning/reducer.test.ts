@@ -117,6 +117,29 @@ describe('learning reducer', () => {
     expect(canRevealFoldResult(predicted)).toBe(true);
   });
 
+  it('requires exactly one valid fold direction for every moving face', () => {
+    const selected = learningReducer(createInitialLearningState(), {
+      type: 'SELECT_MISSION',
+      missionId: 'cube-track-01',
+    });
+    const missingFace = Object.fromEntries(
+      Object.entries(prediction.arrowByFace).filter(([faceId]) => faceId !== 'F4'),
+    );
+    const invalidArrowMaps: readonly unknown[] = [
+      { ...prediction.arrowByFace, F1: 'north' },
+      missingFace,
+      { ...prediction.arrowByFace, F7: 'north' },
+      { ...prediction.arrowByFace, F4: 'diagonal' },
+    ];
+
+    invalidArrowMaps.forEach((arrowByFace) => {
+      expect(() => learningReducer(selected, {
+        type: 'SUBMIT_PREDICTION',
+        prediction: { ...prediction, arrowByFace } as PredictionRecord,
+      })).toThrow(InvalidLearningTransitionError);
+    });
+  });
+
   it('advances through five folds and chooses the post-fold branch by mission kind', () => {
     const tracking = learningReducer(
       learningReducer(createInitialLearningState(), {
