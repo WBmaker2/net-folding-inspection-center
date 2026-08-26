@@ -100,7 +100,7 @@ export const CANONICAL_EVIDENCE_TERMS: Readonly<Record<MissionId, readonly [Geom
   'cube-track-01': ['맞은편', '접는 방향'],
   'cube-track-02': ['맞은편', '접는 방향'],
   'cube-opposite-01': ['맞은편', '접는 방향'],
-  'cube-opposite-02': ['맞은편', '접는 방향'],
+  'cube-opposite-02': ['맞은편', '면'],
   'cube-collision-01': ['겹침', '면'],
   'cube-collision-02': ['겹침', '면'],
   'cube-repair-01': ['면', '겹침'],
@@ -187,7 +187,7 @@ export function buildEvidenceSentence(
   }
   // Face labels end in the consonant sound "면". Normalize neutral catalog
   // particles so each generated sentence reads naturally in Korean.
-  sentence = sentence.replace(/면와/gu, '면과').replace(/면는/gu, '면은').replace(/면가/gu, '면이');
+  sentence = sentence.replace(/면와/gu, '면과').replace(/면는/gu, '면은').replace(/면가/gu, '면이').replace(/면를/gu, '면을');
   return /\{[^{}]+\}/u.test(sentence) ? null : sentence;
 }
 
