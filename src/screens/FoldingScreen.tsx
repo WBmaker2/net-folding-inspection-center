@@ -144,6 +144,9 @@ export function FoldingScreen({
         view="front"
         reducedMotion={reducedMotion}
         singleFaceMode={singleFaceMode}
+        baseFaceId={prediction.baseFaceId}
+        movingFaceId={movingFaceId}
+        hingeFaceId={hingeFaceId}
       />
 
       <FaceRelationTable

@@ -1,9 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
-import { createFoldSequence, getFoldSnapshot } from '../../src/domain/net/foldEngine';
+import { computeFaceFrames, createFoldSequence, getFoldSnapshot } from '../../src/domain/net/foldEngine';
 import { getMissionById } from '../../src/content/missions/catalog';
-import { CubeFoldViewer, isWebGLAvailable } from '../../src/components/net3d/CubeFoldViewer';
-import { buildSceneFaces } from '../../src/components/net3d/sceneModel';
+import { CubeFoldViewer } from '../../src/components/net3d/CubeFoldViewer';
+import { isWebGLAvailable } from '../../src/components/net3d/webgl';
+import {
+  buildSceneFaces,
+  getDecorationShapeDescriptor,
+  getSceneFaceEmphasis,
+} from '../../src/components/net3d/sceneModel';
+import { buildCameraPose } from '../../src/components/net3d/cameraModel';
 
 afterEach(cleanup);
 
@@ -42,7 +48,48 @@ describe('scene model and CubeFoldViewer', () => {
     expect(faces).toHaveLength(6);
     expect(faces.filter((face) => face.status === 'unsettled')).toHaveLength(5);
     expect(faces.find((face) => face.id === mission.baseFaceId)?.status).toBe('settled');
-    expect(new Set(faces.map((face) => face.transform.position[2]))).toEqual(new Set([0, 1]));
+    expect(new Set(faces.map((face) => face.transform.position[2]))).toEqual(new Set([1]));
+  });
+
+  it.each(['F1', 'F2'] as const)('places the step-zero flat faces on the base plane for %s', (baseFaceId) => {
+    const baseComputation = computeFaceFrames(mission.net, baseFaceId);
+    const baseFrame = baseComputation.frames.get(baseFaceId)!;
+    const snapshot = {
+      stepIndex: 0,
+      settledFaceIds: [baseFaceId] as const,
+      frames: new Map([[baseFaceId, baseFrame]]),
+    };
+    const faces = buildSceneFaces(snapshot, mission.net);
+    const base = faces.find((face) => face.id === baseFaceId)!;
+    const basePosition = base.transform.position;
+    faces.filter((face) => !face.settled).forEach((face) => {
+      const delta = face.transform.position.map((value, index) => value - basePosition[index]!) as [number, number, number];
+      expect(delta[0] * base.normal[0] + delta[1] * base.normal[1] + delta[2] * base.normal[2]).toBe(0);
+      expect(face.frame.center).toEqual(face.transform.position);
+    });
+  });
+
+  it('exposes visible decoration geometry descriptors with quarter-turn orientation', () => {
+    const face = mission.net.faces.find((value) => value.id === 'F3')!;
+    const descriptor = getDecorationShapeDescriptor(face);
+    expect(descriptor.kind).toBe('triangle');
+    expect(descriptor.points.length).toBeGreaterThanOrEqual(3);
+    expect(descriptor.rotationRadians).toBe(face.decorationQuarterTurn * Math.PI / 2);
+  });
+
+  it('emphasizes base, moving, hinge and collision faces only in one-face mode', () => {
+    const focus = { singleFaceMode: true, baseFaceId: 'F1' as const, movingFaceId: 'F2' as const, hingeFaceId: 'F3' as const };
+    expect(getSceneFaceEmphasis('F1', false, focus)).toBe('full');
+    expect(getSceneFaceEmphasis('F2', false, focus)).toBe('full');
+    expect(getSceneFaceEmphasis('F3', false, focus)).toBe('full');
+    expect(getSceneFaceEmphasis('F4', false, focus)).toBe('dim');
+    expect(getSceneFaceEmphasis('F4', true, focus)).toBe('full');
+  });
+
+  it('builds four distinct camera poses and avoids a top-view up singularity', () => {
+    const poses = (['front', 'right', 'top', 'fixed-base'] as const).map((view) => buildCameraPose(view));
+    expect(new Set(poses.map((pose) => pose.position.join(','))).size).toBe(4);
+    expect(buildCameraPose('top').up).toEqual([0, 0, -1]);
   });
 
   it('provides exactly four deterministic fixed view buttons', async () => {

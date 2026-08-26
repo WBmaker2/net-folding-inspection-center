@@ -22,6 +22,8 @@ export interface SceneFace {
   readonly grid: FaceDefinition['grid'];
   readonly colorToken: FaceDefinition['colorToken'];
   readonly symbol: FaceDefinition['symbol'];
+  readonly decorationQuarterTurn: FaceDefinition['decorationQuarterTurn'];
+  readonly decorationRadians: number;
   readonly normal: Vec3;
   readonly right: Vec3;
   readonly down: Vec3;
@@ -31,6 +33,28 @@ export interface SceneFace {
   readonly settled: boolean;
   readonly active: boolean;
   readonly collision: boolean;
+}
+
+export type SceneFaceEmphasis = 'full' | 'dim';
+
+export interface SceneFocus {
+  readonly singleFaceMode: boolean;
+  readonly baseFaceId?: FaceId;
+  readonly movingFaceId?: FaceId;
+  readonly hingeFaceId?: FaceId;
+}
+
+export type SceneShapeKind = FaceDefinition['symbol'];
+
+export interface DecorationShapeDescriptor {
+  readonly kind: SceneShapeKind;
+  readonly rotationRadians: number;
+  readonly points: readonly (readonly [number, number])[];
+}
+
+export interface CollisionPatternDescriptor {
+  readonly stripeAngles: readonly number[];
+  readonly stripeWidth: number;
 }
 
 const BASE_NORMAL: Vec3 = [0, 0, 1];
@@ -48,15 +72,79 @@ const copyFrame = (frame: FaceFrame): FaceFrame => Object.freeze({
   center: copyVec3(frame.center),
 });
 
-const frameFromGrid = (): FaceFrame => Object.freeze({
-  normal: copyVec3(BASE_NORMAL),
-  right: copyVec3(BASE_RIGHT),
-  down: copyVec3(BASE_DOWN),
-  // The grid position is represented by SceneTransform.position. Keeping the
-  // frame's center at the cube origin prevents an unsettled face from looking
-  // like a settled cube face to any future consumer of FaceFrame.
-  center: [0, 0, 0] as Vec3,
+const frameFromFlatPosition = (
+  position: readonly [number, number, number],
+  baseFrame: FaceFrame,
+): FaceFrame => Object.freeze({
+  normal: copyVec3(baseFrame.normal),
+  right: copyVec3(baseFrame.right),
+  down: copyVec3(baseFrame.down),
+  // FaceFrame.center is typed as Vec3 for engine compatibility. For a flat
+  // preview it intentionally carries the grid-derived world position, which
+  // may be outside the integer-unit cube range.
+  center: [...position] as Vec3,
 });
+
+const quarterTurnRadians = (quarterTurn: FaceDefinition['decorationQuarterTurn']): number => (
+  quarterTurn * Math.PI / 2
+);
+
+const regularPolygon = (count: number, radius: number, phase = 0): readonly (readonly [number, number])[] => (
+  Object.freeze(Array.from({ length: count }, (_, index) => Object.freeze([
+    radius * Math.cos(phase + index * Math.PI * 2 / count),
+    radius * Math.sin(phase + index * Math.PI * 2 / count),
+  ] as [number, number])))
+);
+
+const starPoints = (): readonly (readonly [number, number])[] => (
+  Object.freeze(Array.from({ length: 10 }, (_, index) => {
+    const radius = index % 2 === 0 ? 0.29 : 0.13;
+    const angle = -Math.PI / 2 + index * Math.PI / 5;
+    return Object.freeze([radius * Math.cos(angle), radius * Math.sin(angle)] as [number, number]);
+  }))
+);
+
+const crossPoints = (): readonly (readonly [number, number])[] => Object.freeze([
+  [-0.1, -0.3], [0.1, -0.3], [0.1, -0.1], [0.3, -0.1],
+  [0.3, 0.1], [0.1, 0.1], [0.1, 0.3], [-0.1, 0.3],
+  [-0.1, 0.1], [-0.3, 0.1], [-0.3, -0.1], [-0.1, -0.1],
+] as readonly (readonly [number, number])[]);
+
+export const getDecorationShapeDescriptor = (
+  face: Pick<FaceDefinition, 'symbol' | 'decorationQuarterTurn'>,
+): DecorationShapeDescriptor => {
+  const points: Readonly<Record<SceneShapeKind, readonly (readonly [number, number])[]>> = {
+    circle: regularPolygon(20, 0.27),
+    square: regularPolygon(4, 0.25, Math.PI / 4),
+    triangle: regularPolygon(3, 0.29, -Math.PI / 2),
+    star: starPoints(),
+    diamond: regularPolygon(4, 0.29),
+    cross: crossPoints(),
+  };
+  return Object.freeze({
+    kind: face.symbol,
+    rotationRadians: quarterTurnRadians(face.decorationQuarterTurn),
+    points: points[face.symbol],
+  });
+};
+
+export const getCollisionPatternDescriptor = (): CollisionPatternDescriptor => Object.freeze({
+  stripeAngles: Object.freeze([Math.PI / 4, -Math.PI / 4]),
+  stripeWidth: 0.045,
+});
+
+export const getSceneFaceEmphasis = (
+  faceId: FaceId,
+  collision: boolean,
+  focus: SceneFocus,
+): SceneFaceEmphasis => {
+  if (!focus.singleFaceMode || collision) return 'full';
+  return faceId === focus.baseFaceId
+    || faceId === focus.movingFaceId
+    || faceId === focus.hingeFaceId
+    ? 'full'
+    : 'dim';
+};
 
 const matrixToQuaternion = (
   right: Vec3,
@@ -126,6 +214,12 @@ export function buildSceneFaces(
     ? snapshot.settledFaceIds[snapshot.settledFaceIds.length - 1]
     : undefined;
   const baseFace = net.faces.find((face) => face.id === snapshot.settledFaceIds[0]) ?? net.faces[0];
+  const baseFrame = snapshot.frames.get(snapshot.settledFaceIds[0] ?? '') ?? {
+    normal: BASE_NORMAL,
+    right: BASE_RIGHT,
+    down: BASE_DOWN,
+    center: [0, 0, 1] as Vec3,
+  };
   const baseGrid = baseFace?.grid ?? { x: 0, y: 0 };
   const settledNormals = new Map<string, number>();
   for (const faceId of settledIds) {
@@ -149,11 +243,22 @@ export function buildSceneFaces(
     if (face === undefined) return [];
     const settled = settledIds.has(face.id);
     const sourceFrame = settled ? snapshot.frames.get(face.id) : undefined;
+    const flatPosition: readonly [number, number, number] = [
+      baseFrame.center[0]
+        + (face.grid.x - baseGrid.x) * baseFrame.right[0]
+        + (face.grid.y - baseGrid.y) * baseFrame.down[0],
+      baseFrame.center[1]
+        + (face.grid.x - baseGrid.x) * baseFrame.right[1]
+        + (face.grid.y - baseGrid.y) * baseFrame.down[1],
+      baseFrame.center[2]
+        + (face.grid.x - baseGrid.x) * baseFrame.right[2]
+        + (face.grid.y - baseGrid.y) * baseFrame.down[2],
+    ];
     const frame = sourceFrame === undefined
-      ? frameFromGrid()
+      ? frameFromFlatPosition(flatPosition, baseFrame)
       : copyFrame(sourceFrame);
     const position: readonly [number, number, number] = sourceFrame === undefined
-      ? [face.grid.x - baseGrid.x, face.grid.y - baseGrid.y, 0]
+      ? flatPosition
       : [frame.center[0], frame.center[1], frame.center[2]];
     const collision = sourceFrame !== undefined
       && (settledNormals.get(vectorKey(sourceFrame.normal)) ?? 0) > 1;
@@ -170,6 +275,8 @@ export function buildSceneFaces(
       grid: Object.freeze({ x: face.grid.x, y: face.grid.y }),
       colorToken: face.colorToken,
       symbol: face.symbol,
+      decorationQuarterTurn: face.decorationQuarterTurn,
+      decorationRadians: quarterTurnRadians(face.decorationQuarterTurn),
       normal: frame.normal,
       right: frame.right,
       down: frame.down,

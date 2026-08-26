@@ -1,8 +1,9 @@
 import { Canvas } from '@react-three/fiber';
-import { useState } from 'react';
-import type { FoldSnapshot, NetDefinition } from '../../domain/net/types';
+import { useEffect, useState } from 'react';
+import type { FaceId, FoldSnapshot, NetDefinition } from '../../domain/net/types';
 import { buildSceneFaces } from './sceneModel';
 import { FoldScene } from './FoldScene';
+import { isWebGLAvailable } from './webgl';
 import './cube-fold-viewer.css';
 
 export type CubeFoldView = 'front' | 'right' | 'top' | 'fixed-base';
@@ -13,6 +14,9 @@ export interface CubeFoldViewerProps {
   readonly view: CubeFoldView;
   readonly reducedMotion: boolean;
   readonly singleFaceMode: boolean;
+  readonly baseFaceId?: FaceId;
+  readonly movingFaceId?: FaceId;
+  readonly hingeFaceId?: FaceId;
 }
 
 const VIEW_LABELS: Readonly<Record<CubeFoldView, string>> = {
@@ -22,30 +26,6 @@ const VIEW_LABELS: Readonly<Record<CubeFoldView, string>> = {
   'fixed-base': '기준면 고정',
 };
 
-const VIEW_POSITIONS: Readonly<Record<CubeFoldView, readonly [number, number, number]>> = {
-  front: [0, 0, 7],
-  right: [7, 0, 0],
-  top: [0, 7, 0],
-  'fixed-base': [0, 0, 7],
-};
-
-/** A guarded probe that is safe during SSR, jsdom, and browser security failures. */
-export function isWebGLAvailable(
-  canvasFactory?: () => HTMLCanvasElement,
-): boolean {
-  if (typeof document === 'undefined' && canvasFactory === undefined) return false;
-  try {
-    const canvas = canvasFactory?.() ?? document.createElement('canvas');
-    if (typeof canvas.getContext !== 'function') return false;
-    const webgl2 = canvas.getContext('webgl2');
-    if (webgl2 !== null) return true;
-    return canvas.getContext('webgl') !== null
-      || canvas.getContext('experimental-webgl') !== null;
-  } catch {
-    return false;
-  }
-}
-
 const viewKeys: readonly CubeFoldView[] = ['front', 'right', 'top', 'fixed-base'];
 
 export function CubeFoldViewer({
@@ -54,10 +34,18 @@ export function CubeFoldViewer({
   view,
   reducedMotion,
   singleFaceMode,
+  baseFaceId,
+  movingFaceId,
+  hingeFaceId,
 }: CubeFoldViewerProps): React.JSX.Element {
   const [selectedView, setSelectedView] = useState<CubeFoldView>(view);
   const [webglAvailable] = useState(() => isWebGLAvailable());
   const faces = buildSceneFaces(snapshot, net);
+
+  // Keep the externally selected preset authoritative while still allowing
+  // the four local buttons to switch presets in the viewer.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => setSelectedView(view), [view]);
 
   return (
     <section
@@ -82,13 +70,17 @@ export function CubeFoldViewer({
         <div className="cube-canvas-shell" aria-hidden="true">
           <Canvas
             orthographic
-            camera={{ position: VIEW_POSITIONS[selectedView], zoom: 3.8, near: -100, far: 100 }}
+            camera={{ position: [0, 0, 7], zoom: 3.8, near: -100, far: 100 }}
             dpr={[1, 2]}
             frameloop="demand"
             aria-hidden="true"
           >
             <FoldScene
               faces={faces}
+              view={selectedView}
+              baseFaceId={baseFaceId}
+              movingFaceId={movingFaceId}
+              hingeFaceId={hingeFaceId}
               reducedMotion={reducedMotion}
               singleFaceMode={singleFaceMode}
             />
