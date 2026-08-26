@@ -68,6 +68,17 @@ Chromium, axe, accessibility tree는 실제 보조기술 세션의 대체가 아
 면 이름·접힘 live region·관계 표·dialog Escape 초점 복귀를 직접 확인하기 전까지
 release-evidence blocker입니다.
 
+## 공개 배포 확인
+
+- 원격 저장소: [WBmaker2/net-folding-inspection-center](https://github.com/WBmaker2/net-folding-inspection-center)
+- GitHub Pages: [https://wbmaker2.github.io/net-folding-inspection-center/](https://wbmaker2.github.io/net-folding-inspection-center/)
+- 최종 workflow run: [33021776965](https://github.com/WBmaker2/net-folding-inspection-center/actions/runs/33021776965) — `cb27544` 기준 build/deploy job 모두 성공
+- 공개 루트와 [favicon.svg](https://wbmaker2.github.io/net-folding-inspection-center/favicon.svg): HTTP 200
+- 공개 HTML의 문서 제목은 `전개도 포장 검수소`이며 Vite asset 경로는 `/net-folding-inspection-center/` base를 사용합니다.
+- 공개 learner path: 검수 접수 → 면 위치 추적 미션 → 기준면·예상 윗면·접는 순서·방향 입력 → 한 면씩 접기 → 접힌 결과 진단하기까지 완료했습니다.
+- 최종 공개 브라우저 확인에서 console error는 0건입니다. `THREE.Clock` deprecation warning 1건은 `@react-three/fiber` 의존 경고로 기능 실패가 아닙니다.
+- 공개 업데이트 내역 dialog에는 2026-08-27 복구·중첩 링크 경계 강화 기록을 포함한 6개 항목이 표시됩니다.
+
 ## 교육적 모형 한계
 
 이 앱은 면 인접·접힘 순서·법선·맞은편·겹침·빈 방향을 보여 주는 결정적 기하
@@ -76,6 +87,8 @@ release-evidence blocker입니다.
 
 ## 범위 경계
 
-원격 저장소 생성, push, GitHub Pages 공개, 서비스 등록 또는 배포를 수행하지
-않았습니다. 최종 수정 wave에서 불가능한 접기 순서의 복귀·재제출과 중첩 symbolic
-link fail-closed 경계를 추가했습니다.
+원격 저장소 생성, push, GitHub Pages 공개와 workflow 배포를 수행했습니다. HVC
+서비스 등록은 이번 요청 범위에 포함하지 않아 수행하지 않았습니다. 최종 수정 wave에서
+불가능한 접기 순서의 복귀·재제출과 중첩 symbolic link fail-closed 경계를 추가했고,
+Pages-safe favicon을 배포했습니다. VoiceOver + Safari 수동 확인은 여전히 사용자
+확인이 필요한 blocker입니다.
