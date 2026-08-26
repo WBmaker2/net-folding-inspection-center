@@ -153,7 +153,8 @@ export interface RepairSubmission {
   readonly faceId: FaceId;
   readonly target: GridPoint;
   readonly accepted: boolean;
-  readonly candidate?: NetDefinition;
+  /** Candidate is mandatory so persistence and the reducer can recompute acceptance. */
+  readonly candidate: NetDefinition;
   readonly submittedAtIso?: string;
 }
 

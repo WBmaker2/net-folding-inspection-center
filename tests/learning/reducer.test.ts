@@ -13,6 +13,7 @@ import {
 import { getMissionById } from '../../src/content/missions/catalog';
 import { evaluateDiagnosis } from '../../src/domain/learning/diagnosis';
 import { validateCubeNet } from '../../src/domain/net/validateCubeNet';
+import { moveFace } from '../../src/domain/learning/repair';
 import type {
   DiagnosisSubmission,
   EvidenceSubmission,
@@ -53,6 +54,7 @@ const repair: RepairSubmission = {
   faceId: 'F6',
   target: { x: 2, y: 1 },
   accepted: true,
+  candidate: moveFace(getMissionById('cube-collision-01').net, 'F6', { x: 2, y: 1 }),
 };
 
 const evidence: EvidenceSubmission = {
@@ -311,11 +313,10 @@ describe('learning reducer', () => {
       type: 'SUBMIT_DIAGNOSIS',
       diagnosis,
     });
-    const rejected = learningReducer(diagnosed, {
+    expect(() => learningReducer(diagnosed, {
       type: 'SUBMIT_REPAIR',
       repair: { ...repair, accepted: false },
-    });
-    expect(rejected.stage).toBe('repair');
+    })).toThrow(InvalidLearningTransitionError);
 
     expect(() => learningReducer(diagnosed, {
       type: 'SUBMIT_REPAIR',

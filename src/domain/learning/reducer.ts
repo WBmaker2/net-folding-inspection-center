@@ -1,5 +1,6 @@
 import { getMissionById } from '../../content/missions/catalog';
 import { evaluateDiagnosis } from './diagnosis';
+import { verifyRepairSubmission, RepairValidationError } from './repairValidation';
 import type {
   AxisDirection,
   FaceId,
@@ -96,15 +97,13 @@ const cloneRepair = (repair: RepairSubmission): RepairSubmission => Object.freez
   faceId: repair.faceId,
   target: freezePoint(repair.target),
   accepted: repair.accepted,
-  ...(repair.submittedAtIso === undefined ? {} : { submittedAtIso: repair.submittedAtIso }),
-  ...(repair.candidate === undefined ? {} : {
-    candidate: Object.freeze({
-      faces: freezeArray(repair.candidate.faces.map((face) => Object.freeze({
-        ...face,
-        grid: freezePoint(face.grid),
-      }))),
-    }),
+  candidate: Object.freeze({
+    faces: freezeArray(repair.candidate.faces.map((face) => Object.freeze({
+      ...face,
+      grid: freezePoint(face.grid),
+    }))),
   }),
+  ...(repair.submittedAtIso === undefined ? {} : { submittedAtIso: repair.submittedAtIso }),
 });
 
 const cloneEvidence = (evidence: EvidenceSubmission): EvidenceSubmission => Object.freeze({
@@ -263,29 +262,6 @@ const validateDiagnosis = (
   return cloneDiagnosis(value);
 };
 
-const validateRepair = (
-  state: LearningState,
-  action: Extract<LearningAction, { readonly type: 'SUBMIT_REPAIR' }>,
-): RepairSubmission => {
-  const value = action.repair;
-  if (!value || !isFaceId(value.faceId) || !value.target
-    || !Number.isSafeInteger(value.target.x) || !Number.isSafeInteger(value.target.y)) {
-    throw transitionError(state, action, 'The repair move is invalid');
-  }
-  if (typeof value.accepted !== 'boolean') {
-    throw transitionError(state, action, 'The repair result is invalid');
-  }
-  if (value.candidate !== undefined
-    && (!value.candidate || !Array.isArray(value.candidate.faces)
-      || value.candidate.faces.some((face) => (
-        !face || !face.grid || !isFaceId(face.id) || !Number.isSafeInteger(face.grid.x)
-        || !Number.isSafeInteger(face.grid.y)
-      )))) {
-    throw transitionError(state, action, 'The repair candidate is invalid');
-  }
-  return cloneRepair(value);
-};
-
 const validateEvidence = (
   state: LearningState,
   action: Extract<LearningAction, { readonly type: 'SUBMIT_EVIDENCE' }>,
@@ -420,7 +396,19 @@ export const learningReducer = (
       if (mission.kind !== 'collision' && mission.kind !== 'repair') {
         throw transitionError(state, action, 'This mission has no repair stage');
       }
-      const repair = validateRepair(state, action);
+      if (state.prediction === null) {
+        throw transitionError(state, action, 'A prediction is required before repair');
+      }
+      let verified;
+      try {
+        verified = verifyRepairSubmission(mission.net, state.prediction.baseFaceId, action.repair);
+      } catch (error) {
+        if (error instanceof RepairValidationError) {
+          throw transitionError(state, action, error.message);
+        }
+        throw error;
+      }
+      const repair = cloneRepair(verified.submission);
       return freezeState({
         ...state,
         stage: repair.accepted === true ? 'evidence' : 'repair',

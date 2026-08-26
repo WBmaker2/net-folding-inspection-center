@@ -1,5 +1,6 @@
 import { getMissionById } from '../../content/missions/catalog';
 import { evaluateDiagnosis } from './diagnosis';
+import { evaluateRepair } from './repair';
 import type {
   AxisDirection,
   DiagnosisSubmission,
@@ -154,21 +155,17 @@ const sanitizeRepair = (value: unknown): RepairSubmission | null => {
   if (!isRecord(value) || !isFaceId(value.faceId) || !integerPoint(value.target)) return null;
   if (typeof value.accepted !== 'boolean') return null;
   if (value.submittedAtIso !== undefined && typeof value.submittedAtIso !== 'string') return null;
-  let repair: RepairSubmission = {
+  if (!isRecord(value.candidate) || !Array.isArray(value.candidate.faces)) return null;
+  const faces = value.candidate.faces.map(sanitizeFace);
+  if (faces.some((face) => face === null) || faces.length !== 6) return null;
+  const candidate = { faces: faces as RecordValue[] } as unknown as RepairSubmission['candidate'];
+  const repair: RepairSubmission = {
     faceId: value.faceId,
     target: { x: value.target.x, y: value.target.y },
     accepted: value.accepted,
+    candidate,
     ...(value.submittedAtIso === undefined ? {} : { submittedAtIso: value.submittedAtIso }),
   };
-  if (value.candidate !== undefined) {
-    if (!isRecord(value.candidate) || !Array.isArray(value.candidate.faces)) return null;
-    const faces = value.candidate.faces.map(sanitizeFace);
-    if (faces.some((face) => face === null)) return null;
-    repair = {
-      ...repair,
-      candidate: { faces: faces as RecordValue[] } as unknown as RepairSubmission['candidate'],
-    };
-  }
   return repair;
 };
 
@@ -229,6 +226,24 @@ const diagnosisIsCorrect = (
   diagnosis: DiagnosisSubmission,
   baseFaceId = mission.baseFaceId,
 ): boolean => evaluateDiagnosis(mission, diagnosis, baseFaceId).isCorrect;
+
+const repairMatchesMission = (
+  mission: MissionDefinition,
+  repair: RepairSubmission,
+  baseFaceId: FaceId,
+): boolean => {
+  try {
+    const evaluation = evaluateRepair(mission.net, repair.candidate, baseFaceId);
+    const changed = evaluation.isSingleFaceMove && evaluation.changedFaceIds.length === 1
+      && evaluation.changedFaceIds[0] === repair.faceId;
+    const candidateFace = repair.candidate.faces.find((face) => face.id === repair.faceId);
+    return changed && candidateFace !== undefined
+      && candidateFace.grid.x === repair.target.x && candidateFace.grid.y === repair.target.y
+      && repair.accepted === evaluation.accepted;
+  } catch {
+    return false;
+  }
+};
 
 const hasNoReviewData = (
   diagnosis: DiagnosisSubmission | null,
@@ -302,6 +317,9 @@ const isReachableProgress = (
     || !matchesCurrentAttempt(diagnosis, attempts.diagnoses, diagnosisRequired)
     || !matchesCurrentAttempt(repair, attempts.repairs, repairRequired)
     || !matchesCurrentAttempt(evidence, attempts.evidence, evidenceRequired)) return false;
+  if (attempts.repairs.some((repair) => !repairMatchesMission(mission, repair, prediction.baseFaceId))) {
+    return false;
+  }
   if (stage === 'folding') {
     return foldStepIndex >= 0 && foldStepIndex < 5
       && hasNoReviewData(diagnosis, repair, evidence);

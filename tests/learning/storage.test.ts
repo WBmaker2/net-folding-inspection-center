@@ -12,6 +12,7 @@ import {
 import { createInitialLearningState, learningReducer } from '../../src/domain/learning/reducer';
 import { getMissionById } from '../../src/content/missions/catalog';
 import { validateCubeNet } from '../../src/domain/net/validateCubeNet';
+import { moveFace } from '../../src/domain/learning/repair';
 import type { PersistedProgress } from '../../src/domain/learning/types';
 const prediction = {
   baseFaceId: 'F1' as const,
@@ -91,7 +92,10 @@ const collisionRepairState = () => learningReducer(collisionFoldedState(), {
 const collisionEvidenceState = () => learningReducer(
   learningReducer(collisionRepairState(), {
     type: 'SUBMIT_REPAIR',
-    repair: { faceId: 'F6', target: { x: 2, y: 1 }, accepted: true },
+    repair: {
+      faceId: 'F6', target: { x: 2, y: 1 }, accepted: true,
+      candidate: moveFace(getMissionById('cube-collision-01').net, 'F6', { x: 2, y: 1 }),
+    },
   }),
   {
     type: 'SUBMIT_EVIDENCE',
@@ -372,7 +376,10 @@ describe('progress storage', () => {
 
     const rejectedRepair = learningReducer(collisionRepairState(), {
       type: 'SUBMIT_REPAIR',
-      repair: { faceId: 'F6', target: { x: 2, y: 1 }, accepted: false },
+      repair: {
+        faceId: 'F6', target: { x: 8, y: 8 }, accepted: false,
+        candidate: moveFace(getMissionById('cube-collision-01').net, 'F6', { x: 8, y: 8 }),
+      },
     });
     const rejected = toPersistedProgress(rejectedRepair);
     expect(sanitizePersistedProgress(rejected)).not.toBeNull();
