@@ -1,0 +1,80 @@
+[
+  {
+    "id": "cube-track-01",
+    "order": 1,
+    "kind": "tracking",
+    "title": "면 위치 추적 1",
+    "question": "기준면을 F1으로 정하고 한 면씩 접었을 때 윗면과 면의 관계를 예측해 보세요.",
+    "net": {
+      "faces": [
+        { "id": "F1", "grid": { "x": 1, "y": 2 }, "colorToken": "blue", "symbol": "circle", "decorationQuarterTurn": 0 },
+        { "id": "F2", "grid": { "x": 1, "y": 1 }, "colorToken": "yellow", "symbol": "triangle", "decorationQuarterTurn": 0 },
+        { "id": "F3", "grid": { "x": 1, "y": 0 }, "colorToken": "green", "symbol": "square", "decorationQuarterTurn": 1 },
+        { "id": "F4", "grid": { "x": 1, "y": 3 }, "colorToken": "coral", "symbol": "star", "decorationQuarterTurn": 0 },
+        { "id": "F5", "grid": { "x": 0, "y": 2 }, "colorToken": "purple", "symbol": "diamond", "decorationQuarterTurn": 0 },
+        { "id": "F6", "grid": { "x": 2, "y": 1 }, "colorToken": "teal", "symbol": "cross", "decorationQuarterTurn": 0 }
+      ]
+    },
+    "baseFaceId": "F1",
+    "suggestedFoldOrder": ["F2", "F3", "F5", "F6", "F4"],
+    "errorModel": "decoration-direction",
+    "answer": {
+      "topFaceId": "F3",
+      "oppositePairs": [
+        { "a": "F1", "b": "F3" },
+        { "a": "F2", "b": "F4" },
+        { "a": "F5", "b": "F6" }
+      ],
+      "decorationTarget": { "faceId": "F3", "targetWorldUp": "+y" }
+    },
+    "hints": [
+      { "level": 1, "focus": "shared-edge", "text": "먼저 기준면과 바로 맞닿은 공통 모서리를 찾아 어느 면이 이어지는지 관찰해 보세요." },
+      { "level": 2, "focus": "fold-path", "text": "공통 모서리에서 시작해 한 면씩 접는 경로를 따라가며 각 면의 방향을 기록해 보세요." },
+      { "level": 3, "focus": "compare-candidates", "text": "윗면 후보 두 개의 접는 방향을 비교하고, 기준면과 반대인 면도 함께 확인해 보세요." }
+    ],
+    "sentenceFrame": {
+      "template": "{firstFace}와 {secondFace}는 {term1}을 따라가면 서로 {term2}입니다.",
+      "placeholders": ["firstFace", "secondFace", "term1", "term2"]
+    },
+    "targetVocabulary": ["면", "모서리", "접는 방향", "맞은편"]
+  },
+  {
+    "id": "cube-track-02",
+    "order": 2,
+    "kind": "tracking",
+    "title": "면 위치 추적 2",
+    "question": "F1을 기준면으로 삼고 F3을 거쳐 F4가 어디에 놓이는지 접힘 경로로 설명해 보세요.",
+    "net": {
+      "faces": [
+        { "id": "F1", "grid": { "x": 1, "y": 1 }, "colorToken": "blue", "symbol": "circle", "decorationQuarterTurn": 0 },
+        { "id": "F2", "grid": { "x": 1, "y": 0 }, "colorToken": "yellow", "symbol": "triangle", "decorationQuarterTurn": 0 },
+        { "id": "F3", "grid": { "x": 1, "y": 2 }, "colorToken": "green", "symbol": "square", "decorationQuarterTurn": 0 },
+        { "id": "F4", "grid": { "x": 1, "y": 3 }, "colorToken": "coral", "symbol": "star", "decorationQuarterTurn": 3 },
+        { "id": "F5", "grid": { "x": 0, "y": 1 }, "colorToken": "purple", "symbol": "diamond", "decorationQuarterTurn": 0 },
+        { "id": "F6", "grid": { "x": 2, "y": 1 }, "colorToken": "teal", "symbol": "cross", "decorationQuarterTurn": 0 }
+      ]
+    },
+    "baseFaceId": "F1",
+    "suggestedFoldOrder": ["F2", "F3", "F4", "F5", "F6"],
+    "errorModel": "decoration-direction",
+    "answer": {
+      "topFaceId": "F4",
+      "oppositePairs": [
+        { "a": "F1", "b": "F4" },
+        { "a": "F2", "b": "F3" },
+        { "a": "F5", "b": "F6" }
+      ],
+      "decorationTarget": { "faceId": "F4", "targetWorldUp": "-y" }
+    },
+    "hints": [
+      { "level": 1, "focus": "shared-edge", "text": "F1과 맞닿은 면에서 공통 모서리와 북쪽·남쪽 접는 방향을 먼저 관찰해 보세요." },
+      { "level": 2, "focus": "fold-path", "text": "F1에서 F3을 지나 F4로 이어지는 접힘 경로를 한 단계씩 추적해 보세요." },
+      { "level": 3, "focus": "compare-candidates", "text": "F4와 다른 윗면 후보의 방향을 비교해 어느 후보가 경로의 마지막에 놓이는지 설명해 보세요." }
+    ],
+    "sentenceFrame": {
+      "template": "{firstFace}에서 {secondFace}까지 {term1}을 따라가면 두 면은 {term2} 관계입니다.",
+      "placeholders": ["firstFace", "secondFace", "term1", "term2"]
+    },
+    "targetVocabulary": ["면", "모서리", "접는 방향", "맞은편"]
+  }
+]

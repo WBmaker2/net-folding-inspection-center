@@ -1,0 +1,68 @@
+[
+  {
+    "id": "cube-opposite-01",
+    "order": 3,
+    "kind": "opposite",
+    "title": "맞은편 면 찾기 1",
+    "question": "F1을 기준면으로 접은 뒤 F1과 맞은편에 놓이는 면을 접힘 근거와 함께 찾아보세요.",
+    "net": {
+      "faces": [
+        { "id": "F1", "grid": { "x": 1, "y": 2 }, "colorToken": "blue", "symbol": "circle", "decorationQuarterTurn": 0 },
+        { "id": "F2", "grid": { "x": 1, "y": 1 }, "colorToken": "yellow", "symbol": "triangle", "decorationQuarterTurn": 0 },
+        { "id": "F3", "grid": { "x": 1, "y": 0 }, "colorToken": "green", "symbol": "square", "decorationQuarterTurn": 0 },
+        { "id": "F4", "grid": { "x": 1, "y": 3 }, "colorToken": "coral", "symbol": "star", "decorationQuarterTurn": 0 },
+        { "id": "F5", "grid": { "x": 0, "y": 2 }, "colorToken": "purple", "symbol": "diamond", "decorationQuarterTurn": 0 },
+        { "id": "F6", "grid": { "x": 2, "y": 2 }, "colorToken": "teal", "symbol": "cross", "decorationQuarterTurn": 0 }
+      ]
+    },
+    "baseFaceId": "F1",
+    "suggestedFoldOrder": ["F2", "F3", "F5", "F6", "F4"],
+    "errorModel": "none",
+    "answer": {
+      "oppositePair": { "a": "F1", "b": "F3" }
+    },
+    "hints": [
+      { "level": 1, "focus": "shared-edge", "text": "기준면의 공통 모서리에 붙은 면 두 개를 살펴보고, 각각 어느 방향으로 접히는지 관찰해 보세요." },
+      { "level": 2, "focus": "fold-path", "text": "기준면에서 출발해 후보 면까지 이어지는 접힘 경로를 따라가며 법선 방향을 비교해 보세요." },
+      { "level": 3, "focus": "compare-candidates", "text": "후보 두 면 중 기준면과 반대 방향을 가리키는 면을 고르고, 나머지 후보와 근거를 비교해 보세요." }
+    ],
+    "sentenceFrame": {
+      "template": "{firstFace}와 {secondFace}는 {term1}을 따라 접으면 서로 {term2}이 됩니다.",
+      "placeholders": ["firstFace", "secondFace", "term1", "term2"]
+    },
+    "targetVocabulary": ["맞은편", "면", "모서리", "접는 방향"]
+  },
+  {
+    "id": "cube-opposite-02",
+    "order": 4,
+    "kind": "opposite",
+    "title": "맞은편 면 찾기 2",
+    "question": "북쪽과 남쪽으로 이어진 접힘 경로를 비교하여 F2의 맞은편 면을 찾아보세요.",
+    "net": {
+      "faces": [
+        { "id": "F1", "grid": { "x": 1, "y": 1 }, "colorToken": "blue", "symbol": "circle", "decorationQuarterTurn": 0 },
+        { "id": "F2", "grid": { "x": 1, "y": 0 }, "colorToken": "yellow", "symbol": "triangle", "decorationQuarterTurn": 0 },
+        { "id": "F3", "grid": { "x": 1, "y": 2 }, "colorToken": "green", "symbol": "square", "decorationQuarterTurn": 0 },
+        { "id": "F4", "grid": { "x": 1, "y": 3 }, "colorToken": "coral", "symbol": "star", "decorationQuarterTurn": 0 },
+        { "id": "F5", "grid": { "x": 0, "y": 1 }, "colorToken": "purple", "symbol": "diamond", "decorationQuarterTurn": 0 },
+        { "id": "F6", "grid": { "x": 2, "y": 1 }, "colorToken": "teal", "symbol": "cross", "decorationQuarterTurn": 0 }
+      ]
+    },
+    "baseFaceId": "F1",
+    "suggestedFoldOrder": ["F2", "F3", "F4", "F5", "F6"],
+    "errorModel": "none",
+    "answer": {
+      "oppositePair": { "a": "F2", "b": "F3" }
+    },
+    "hints": [
+      { "level": 1, "focus": "shared-edge", "text": "F2와 F1이 만나는 공통 모서리를 찾고, 그 모서리를 축으로 접히는 방향을 관찰해 보세요." },
+      { "level": 2, "focus": "fold-path", "text": "F2에서 기준면을 지나 남쪽으로 이어지는 접힘 경로를 단계별로 추적해 보세요." },
+      { "level": 3, "focus": "compare-candidates", "text": "F2의 반대 후보 두 면이 어느 방향을 향하는지 비교하여 한 면을 선택해 보세요." }
+    ],
+    "sentenceFrame": {
+      "template": "{firstFace}와 {secondFace}는 서로 반대인 {term1}을 가져 {term2} 관계입니다.",
+      "placeholders": ["firstFace", "secondFace", "term1", "term2"]
+    },
+    "targetVocabulary": ["맞은편", "면", "모서리", "접는 방향"]
+  }
+]

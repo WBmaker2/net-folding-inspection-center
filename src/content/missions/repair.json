@@ -1,0 +1,76 @@
+[
+  {
+    "id": "cube-repair-01",
+    "order": 7,
+    "kind": "repair",
+    "title": "한 면 수리 1",
+    "question": "겹친 전개도에서 면 하나만 옮겨 겹침 없이 닫히는 모양으로 수리해 보세요.",
+    "net": {
+      "faces": [
+        { "id": "F1", "grid": { "x": 1, "y": 2 }, "colorToken": "blue", "symbol": "circle", "decorationQuarterTurn": 0 },
+        { "id": "F2", "grid": { "x": 1, "y": 1 }, "colorToken": "yellow", "symbol": "triangle", "decorationQuarterTurn": 0 },
+        { "id": "F3", "grid": { "x": 1, "y": 0 }, "colorToken": "green", "symbol": "square", "decorationQuarterTurn": 0 },
+        { "id": "F4", "grid": { "x": 1, "y": 3 }, "colorToken": "coral", "symbol": "star", "decorationQuarterTurn": 0 },
+        { "id": "F5", "grid": { "x": 0, "y": 2 }, "colorToken": "purple", "symbol": "diamond", "decorationQuarterTurn": 0 },
+        { "id": "F6", "grid": { "x": 0, "y": 1 }, "colorToken": "teal", "symbol": "cross", "decorationQuarterTurn": 0 }
+      ]
+    },
+    "baseFaceId": "F1",
+    "suggestedFoldOrder": ["F2", "F5", "F6", "F3", "F4"],
+    "errorModel": "overlap",
+    "answer": {
+      "repairMove": {
+        "faceId": "F6",
+        "from": { "x": 0, "y": 1 },
+        "to": { "x": 2, "y": 1 }
+      }
+    },
+    "hints": [
+      { "level": 1, "focus": "shared-edge", "text": "움직일 면의 공통 모서리를 관찰하고, 다른 다섯 면과 이어질 수 있는 자리를 찾아보세요." },
+      { "level": 2, "focus": "fold-path", "text": "한 면을 옮겼다고 생각하고 기준면에서 접힘 경로를 다시 따라가며 여섯 방향을 확인해 보세요." },
+      { "level": 3, "focus": "compare-candidates", "text": "이동 후보 두 칸을 비교하여 연결은 유지하면서 겹침이 사라지는 위치를 선택해 보세요." }
+    ],
+    "sentenceFrame": {
+      "template": "{firstFace}를 옮겨 {term1}을 없애고 모든 {term2}이 이어지도록 수리했습니다.",
+      "placeholders": ["firstFace", "term1", "term2"]
+    },
+    "targetVocabulary": ["겹침", "면", "모서리", "접는 방향", "빈 면"]
+  },
+  {
+    "id": "cube-repair-02",
+    "order": 8,
+    "kind": "repair",
+    "title": "한 면 수리 2",
+    "question": "F3의 위치를 한 번만 바꾸어 겹침을 없애고 F1의 맞은편 면이 생기도록 수리해 보세요.",
+    "net": {
+      "faces": [
+        { "id": "F1", "grid": { "x": 1, "y": 2 }, "colorToken": "blue", "symbol": "circle", "decorationQuarterTurn": 0 },
+        { "id": "F2", "grid": { "x": 1, "y": 1 }, "colorToken": "yellow", "symbol": "triangle", "decorationQuarterTurn": 0 },
+        { "id": "F3", "grid": { "x": 3, "y": 1 }, "colorToken": "green", "symbol": "square", "decorationQuarterTurn": 0 },
+        { "id": "F4", "grid": { "x": 1, "y": 3 }, "colorToken": "coral", "symbol": "star", "decorationQuarterTurn": 0 },
+        { "id": "F5", "grid": { "x": 0, "y": 2 }, "colorToken": "purple", "symbol": "diamond", "decorationQuarterTurn": 0 },
+        { "id": "F6", "grid": { "x": 2, "y": 1 }, "colorToken": "teal", "symbol": "cross", "decorationQuarterTurn": 0 }
+      ]
+    },
+    "baseFaceId": "F1",
+    "suggestedFoldOrder": ["F2", "F5", "F6", "F3", "F4"],
+    "errorModel": "overlap",
+    "answer": {
+      "repairMove": {
+        "faceId": "F3",
+        "from": { "x": 3, "y": 1 },
+        "to": { "x": 1, "y": 0 }
+      }
+    },
+    "hints": [
+      { "level": 1, "focus": "shared-edge", "text": "F3이 새 자리에서 붙을 공통 모서리를 먼저 관찰하고, 격자에서 비어 있는 이웃을 살펴보세요." },
+      { "level": 2, "focus": "fold-path", "text": "F3을 한 칸씩 옮긴 후보마다 F1에서의 접힘 경로와 맞은편 관계를 다시 추적해 보세요." },
+      { "level": 3, "focus": "compare-candidates", "text": "두 후보 위치의 충돌 여부와 여섯 방향이 모두 채워지는지를 비교해 한 면만 이동해 보세요." }
+    ],
+    "sentenceFrame": {
+      "template": "{firstFace}를 옮기면 {term1}이 사라지고 {secondFace}의 {term2} 관계를 확인할 수 있습니다.",
+      "placeholders": ["firstFace", "secondFace", "term1", "term2"]
+    },
+    "targetVocabulary": ["겹침", "맞은편", "면", "모서리", "빈 면"]
+  }
+]
