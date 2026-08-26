@@ -1,3 +1,5 @@
+import { getMissionById } from '../../content/missions/catalog';
+import { validateCubeNet } from '../net/validateCubeNet';
 import type {
   AxisDirection,
   DiagnosisSubmission,
@@ -7,7 +9,10 @@ import type {
   GridPoint,
   LearningAttempts,
   LearningState,
+  MissionDefinition,
   MissionId,
+  PersistedEvidenceSubmission,
+  PersistedLearningAttempts,
   PersistedProgress,
   PredictionRecord,
   ProgressStore,
@@ -116,12 +121,12 @@ const sanitizeFace = (value: unknown): RecordValue | null => {
 
 const sanitizeRepair = (value: unknown): RepairSubmission | null => {
   if (!isRecord(value) || !isFaceId(value.faceId) || !integerPoint(value.target)) return null;
-  if (value.accepted !== undefined && typeof value.accepted !== 'boolean') return null;
+  if (typeof value.accepted !== 'boolean') return null;
   if (value.submittedAtIso !== undefined && typeof value.submittedAtIso !== 'string') return null;
   let repair: RepairSubmission = {
     faceId: value.faceId,
     target: { x: value.target.x, y: value.target.y },
-    ...(value.accepted === undefined ? {} : { accepted: value.accepted }),
+    accepted: value.accepted,
     ...(value.submittedAtIso === undefined ? {} : { submittedAtIso: value.submittedAtIso }),
   };
   if (value.candidate !== undefined) {
@@ -136,12 +141,10 @@ const sanitizeRepair = (value: unknown): RepairSubmission | null => {
   return repair;
 };
 
-const sanitizeEvidence = (value: unknown): EvidenceSubmission | null => {
+const sanitizePersistedEvidence = (value: unknown): PersistedEvidenceSubmission | null => {
   if (!isRecord(value) || !Array.isArray(value.selectedTerms) || value.selectedTerms.length === 0
     || !value.selectedTerms.every(isGeometryTerm)
-    || new Set(value.selectedTerms).size !== value.selectedTerms.length
-    || typeof value.completedSentence !== 'string'
-    || value.completedSentence.trim().length === 0) return null;
+    || new Set(value.selectedTerms).size !== value.selectedTerms.length) return null;
   if (value.oppositePair !== undefined
     && (!isRecord(value.oppositePair) || !isFaceId(value.oppositePair.a)
       || !isFaceId(value.oppositePair.b) || value.oppositePair.a === value.oppositePair.b)) return null;
@@ -154,54 +157,192 @@ const sanitizeEvidence = (value: unknown): EvidenceSubmission | null => {
       },
     }),
     selectedTerms: [...value.selectedTerms],
-    completedSentence: value.completedSentence,
   };
 };
 
-const sanitizeAttempts = (value: unknown): LearningAttempts | null => {
+const sanitizePersistedAttempts = (value: unknown): PersistedLearningAttempts | null => {
   if (!isRecord(value) || !Array.isArray(value.predictions) || !Array.isArray(value.diagnoses)
     || !Array.isArray(value.repairs) || !Array.isArray(value.evidence)) return null;
   const predictions = value.predictions.map(sanitizePrediction);
   const diagnoses = value.diagnoses.map(sanitizeDiagnosis);
   const repairs = value.repairs.map(sanitizeRepair);
-  const evidence = value.evidence.map(sanitizeEvidence);
+  const evidence = value.evidence.map(sanitizePersistedEvidence);
   if ([...predictions, ...diagnoses, ...repairs, ...evidence].some((item) => item === null)) return null;
   return {
     predictions: predictions as PredictionRecord[],
     diagnoses: diagnoses as DiagnosisSubmission[],
     repairs: repairs as RepairSubmission[],
-    evidence: evidence as EvidenceSubmission[],
+    evidence: evidence as PersistedEvidenceSubmission[],
   };
+};
+
+const movingFacesFor = (mission: MissionDefinition): readonly FaceId[] => (
+  mission.net.faces
+    .map((face) => face.id)
+    .filter((faceId) => faceId !== mission.baseFaceId)
+);
+
+const predictionMatchesMission = (
+  prediction: PredictionRecord,
+  mission: MissionDefinition,
+): boolean => (
+  prediction.baseFaceId === mission.baseFaceId
+  && prediction.foldOrder.length === movingFacesFor(mission).length
+  && new Set(prediction.foldOrder).size === prediction.foldOrder.length
+  && prediction.foldOrder.every((faceId) => movingFacesFor(mission).includes(faceId))
+);
+
+const sameFaceSet = (left: readonly FaceId[], right: readonly FaceId[]): boolean => (
+  left.length === right.length
+  && new Set(left).size === left.length
+  && new Set(right).size === right.length
+  && left.every((faceId) => right.includes(faceId))
+);
+
+const expectedCollisionFaces = (mission: MissionDefinition): readonly FaceId[] => {
+  if (mission.kind === 'collision') return mission.answer.collisionPair;
+  if (mission.kind === 'repair') {
+    return validateCubeNet(mission.net, mission.baseFaceId).collisions[0]?.faceIds ?? [];
+  }
+  return [];
+};
+
+const diagnosisIsCorrect = (
+  mission: MissionDefinition,
+  diagnosis: DiagnosisSubmission,
+): boolean => {
+  if (mission.kind !== 'collision' && mission.kind !== 'repair') return false;
+  if (diagnosis.selectedErrorType !== mission.errorModel
+    || !sameFaceSet(diagnosis.selectedFaceIds, expectedCollisionFaces(mission))
+    || diagnosis.selectedMissingDirection === undefined) return false;
+  const expectedDirection = mission.kind === 'collision'
+    ? mission.answer.missingDirection
+    : validateCubeNet(mission.net, mission.baseFaceId).missingNormals[0];
+  return expectedDirection !== undefined
+    && diagnosis.selectedMissingDirection === expectedDirection;
+};
+
+const hasNoReviewData = (
+  diagnosis: DiagnosisSubmission | null,
+  repair: RepairSubmission | null,
+  evidence: PersistedEvidenceSubmission | null,
+): boolean => diagnosis === null && repair === null && evidence === null;
+
+const attemptsAreEmpty = (attempts: PersistedLearningAttempts): boolean => (
+  attempts.predictions.length === 0
+  && attempts.diagnoses.length === 0
+  && attempts.repairs.length === 0
+  && attempts.evidence.length === 0
+);
+
+const isReachableProgress = (
+  missionId: MissionId | null,
+  stage: PersistedProgress['stage'],
+  prediction: PredictionRecord | null,
+  foldStepIndex: number,
+  diagnosis: DiagnosisSubmission | null,
+  repair: RepairSubmission | null,
+  evidence: PersistedEvidenceSubmission | null,
+  attempts: PersistedLearningAttempts,
+  completedMissionIds: readonly MissionId[],
+): boolean => {
+  if (missionId === null) {
+    return stage === 'intake'
+      && prediction === null
+      && foldStepIndex === 0
+      && hasNoReviewData(diagnosis, repair, evidence)
+      && attemptsAreEmpty(attempts);
+  }
+
+  const mission = getMissionById(missionId);
+  if (stage === 'intake' || prediction !== null && !predictionMatchesMission(prediction, mission)) {
+    return false;
+  }
+  if (stage !== 'prediction' && prediction === null) return false;
+  if (stage === 'prediction') {
+    return prediction === null
+      && foldStepIndex === 0
+      && hasNoReviewData(diagnosis, repair, evidence);
+  }
+  if (prediction === null) return false;
+  if (stage === 'folding') {
+    return foldStepIndex >= 0 && foldStepIndex < 5
+      && hasNoReviewData(diagnosis, repair, evidence);
+  }
+  if (foldStepIndex !== 5) return false;
+
+  const diagnosticMission = mission.kind === 'collision' || mission.kind === 'repair';
+  if (stage === 'diagnosis') {
+    return diagnosticMission && repair === null && evidence === null
+      && (diagnosis === null || !diagnosisIsCorrect(mission, diagnosis));
+  }
+  if (stage === 'repair') {
+    return diagnosticMission && diagnosis !== null && diagnosisIsCorrect(mission, diagnosis)
+      && evidence === null
+      && (repair === null || repair.accepted === false);
+  }
+  if (stage === 'evidence' || stage === 'complete') {
+    if (diagnosticMission) {
+      if (diagnosis === null || !diagnosisIsCorrect(mission, diagnosis)
+        || repair === null || repair.accepted !== true) return false;
+    } else if (diagnosis !== null || repair !== null) {
+      return false;
+    }
+    if (stage === 'complete') {
+      return evidence !== null && completedMissionIds.includes(missionId);
+    }
+    return true;
+  }
+  return false;
 };
 
 /** Rebuilds persisted data from an allowlist, dropping unknown/personal fields. */
 export const sanitizePersistedProgress = (value: unknown): PersistedProgress | null => {
-  const foldStepIndex = isRecord(value) ? value.foldStepIndex : undefined;
   if (!isRecord(value) || value.version !== 1
     || (value.missionId !== null && !isMissionId(value.missionId))
-    || !isStage(value.stage) || typeof foldStepIndex !== 'number'
-    || !Number.isInteger(foldStepIndex)
-    || foldStepIndex < 0 || foldStepIndex > 5
-    || (value.prediction !== null && sanitizePrediction(value.prediction) === null)
-    || (value.diagnosis !== null && sanitizeDiagnosis(value.diagnosis) === null)
-    || (value.repair !== null && sanitizeRepair(value.repair) === null)
-    || (value.evidence !== null && sanitizeEvidence(value.evidence) === null)
-    || sanitizeAttempts(value.attempts) === null
+    || !isStage(value.stage)
+    || typeof value.foldStepIndex !== 'number'
+    || !Number.isInteger(value.foldStepIndex)
+    || value.foldStepIndex < 0 || value.foldStepIndex > 5
     || !Array.isArray(value.completedMissionIds)
     || !value.completedMissionIds.every(isMissionId)) return null;
+
+  const prediction = value.prediction === null ? null : sanitizePrediction(value.prediction);
+  const diagnosis = value.diagnosis === null ? null : sanitizeDiagnosis(value.diagnosis);
+  const repair = value.repair === null ? null : sanitizeRepair(value.repair);
+  const evidence = value.evidence === null
+    ? null
+    : sanitizePersistedEvidence(value.evidence);
+  const attempts = sanitizePersistedAttempts(value.attempts);
+  if ((value.prediction !== null && prediction === null)
+    || (value.diagnosis !== null && diagnosis === null)
+    || (value.repair !== null && repair === null)
+    || (value.evidence !== null && evidence === null)
+    || attempts === null) return null;
+
   const completedMissionIds = value.completedMissionIds as MissionId[];
-  if (new Set(completedMissionIds).size !== completedMissionIds.length) return null;
-  const attempts = sanitizeAttempts(value.attempts);
-  if (attempts === null) return null;
+  if (new Set(completedMissionIds).size !== completedMissionIds.length
+    || !isReachableProgress(
+      value.missionId,
+      value.stage,
+      prediction,
+      value.foldStepIndex,
+      diagnosis,
+      repair,
+      evidence,
+      attempts,
+      completedMissionIds,
+    )) return null;
+
   return {
     version: 1,
     missionId: value.missionId,
     stage: value.stage,
-    prediction: value.prediction === null ? null : sanitizePrediction(value.prediction),
-    foldStepIndex,
-    diagnosis: value.diagnosis === null ? null : sanitizeDiagnosis(value.diagnosis),
-    repair: value.repair === null ? null : sanitizeRepair(value.repair),
-    evidence: value.evidence === null ? null : sanitizeEvidence(value.evidence),
+    prediction,
+    foldStepIndex: value.foldStepIndex,
+    diagnosis,
+    repair,
+    evidence,
     attempts,
     completedMissionIds: [...completedMissionIds],
   };
@@ -213,6 +354,26 @@ const cloneProgress = (progress: PersistedProgress): PersistedProgress => {
   return sanitized;
 };
 
+const toPersistedEvidence = (
+  evidence: EvidenceSubmission | null,
+): PersistedEvidenceSubmission | null => (
+  evidence === null ? null : {
+    ...(evidence.oppositePair === undefined ? {} : {
+      oppositePair: { ...evidence.oppositePair },
+    }),
+    selectedTerms: [...evidence.selectedTerms],
+  }
+);
+
+const toPersistedAttempts = (attempts: LearningAttempts): PersistedLearningAttempts => ({
+  predictions: [...attempts.predictions],
+  diagnoses: [...attempts.diagnoses],
+  repairs: [...attempts.repairs],
+  evidence: attempts.evidence
+    .map((evidence) => toPersistedEvidence(evidence))
+    .filter((evidence): evidence is PersistedEvidenceSubmission => evidence !== null),
+});
+
 export const toPersistedProgress = (state: LearningState): PersistedProgress => cloneProgress({
   version: 1,
   missionId: state.missionId,
@@ -221,9 +382,9 @@ export const toPersistedProgress = (state: LearningState): PersistedProgress => 
   foldStepIndex: state.foldStepIndex,
   diagnosis: state.diagnosis,
   repair: state.repair,
-  evidence: state.evidence,
-  attempts: state.attempts,
-  completedMissionIds: state.completedMissionIds,
+  evidence: toPersistedEvidence(state.evidence),
+  attempts: toPersistedAttempts(state.attempts),
+  completedMissionIds: [...state.completedMissionIds],
 });
 
 export const createMemoryProgressStore = (): ProgressStore => {
@@ -246,7 +407,19 @@ export const createSessionProgressStore = (storage: Storage): ProgressStore => (
     if (raw === null) return null;
     try {
       const progress = sanitizePersistedProgress(JSON.parse(raw) as unknown);
-      if (progress === null) storage.removeItem(PROGRESS_STORAGE_KEY);
+      if (progress === null) {
+        storage.removeItem(PROGRESS_STORAGE_KEY);
+        return null;
+      }
+      const canonical = JSON.stringify(progress);
+      if (raw !== canonical) {
+        try {
+          storage.setItem(PROGRESS_STORAGE_KEY, canonical);
+        } catch {
+          try { storage.removeItem(PROGRESS_STORAGE_KEY); } catch { /* unavailable storage */ }
+          return null;
+        }
+      }
       return progress;
     } catch {
       try { storage.removeItem(PROGRESS_STORAGE_KEY); } catch { /* unavailable storage */ }
@@ -260,12 +433,9 @@ export const createSessionProgressStore = (storage: Storage): ProgressStore => (
   clear: () => { storage.removeItem(PROGRESS_STORAGE_KEY); },
 });
 
-/** Writes only after explicit opt-in; opting out removes the existing tab record. */
+/** Writes only after explicit opt-in; clearing is an explicit operation. */
 export const persistLearningState = (state: LearningState, store: ProgressStore): void => {
-  if (!state.storageOptIn) {
-    store.clear();
-    return;
-  }
+  if (!state.storageOptIn) return;
   store.save(toPersistedProgress(state));
 };
 

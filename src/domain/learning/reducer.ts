@@ -84,7 +84,7 @@ const cloneDiagnosis = (diagnosis: DiagnosisSubmission): DiagnosisSubmission => 
 const cloneRepair = (repair: RepairSubmission): RepairSubmission => Object.freeze({
   faceId: repair.faceId,
   target: freezePoint(repair.target),
-  ...(repair.accepted === undefined ? {} : { accepted: repair.accepted }),
+  accepted: repair.accepted,
   ...(repair.submittedAtIso === undefined ? {} : { submittedAtIso: repair.submittedAtIso }),
   ...(repair.candidate === undefined ? {} : {
     candidate: Object.freeze({
@@ -240,7 +240,7 @@ const validateRepair = (
     || !Number.isSafeInteger(value.target.x) || !Number.isSafeInteger(value.target.y)) {
     throw transitionError(state, action, 'The repair move is invalid');
   }
-  if (value.accepted !== undefined && typeof value.accepted !== 'boolean') {
+  if (typeof value.accepted !== 'boolean') {
     throw transitionError(state, action, 'The repair result is invalid');
   }
   if (value.candidate !== undefined
@@ -311,7 +311,7 @@ const diagnosisIsCorrect = (
   if (mission.kind !== 'collision' && mission.kind !== 'repair') return false;
   const expectedFaces = expectedCollisionFaces(mission);
   if (!sameFaceSet(diagnosis.selectedFaceIds, expectedFaces)) return false;
-  if (diagnosis.selectedMissingDirection === undefined) return true;
+  if (diagnosis.selectedMissingDirection === undefined) return false;
   const validation = validateCubeNet(mission.net, mission.baseFaceId);
   const expectedDirection = mission.kind === 'collision'
     ? mission.answer.missingDirection
@@ -406,7 +406,7 @@ export const learningReducer = (
       const repair = validateRepair(state, action);
       return freezeState({
         ...state,
-        stage: repair.accepted === false ? 'repair' : 'evidence',
+        stage: repair.accepted === true ? 'evidence' : 'repair',
         repair,
         attempts: appendRepair(state, repair),
       });
@@ -444,8 +444,8 @@ export const learningReducer = (
         throw transitionError(state, action, 'The fold review can only reopen a completed fold');
       }
       const stepIndex = action.stepIndex ?? 0;
-      if (!Number.isInteger(stepIndex) || stepIndex < 0 || stepIndex > FOLD_STEP_COUNT) {
-        throw transitionError(state, action, 'The fold review step must be between 0 and 5');
+      if (!Number.isInteger(stepIndex) || stepIndex < 0 || stepIndex >= FOLD_STEP_COUNT) {
+        throw transitionError(state, action, 'The fold review step must be between 0 and 4');
       }
       return freezeState({
         ...state,

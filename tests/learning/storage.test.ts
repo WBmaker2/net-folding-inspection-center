@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   createMemoryProgressStore,
   createSessionProgressStore,
+  disablePersistence,
   persistLearningState,
   PROGRESS_STORAGE_KEY,
+  sanitizePersistedProgress,
   toPersistedProgress,
 } from '../../src/domain/learning/storage';
 import { createInitialLearningState, learningReducer } from '../../src/domain/learning/reducer';
@@ -75,13 +77,13 @@ describe('progress storage', () => {
 
   it('does not touch session storage before explicit opt-in', () => {
     const storage = new FakeStorage();
-    const setItem = vi.spyOn(storage, 'setItem');
     const store = createSessionProgressStore(storage);
 
-    expect(setItem).not.toHaveBeenCalled();
+    storage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify({ keep: true }));
+    const setItem = vi.spyOn(storage, 'setItem');
     persistLearningState(progressedState(), store);
     expect(setItem).not.toHaveBeenCalled();
-    expect(storage.getItem(PROGRESS_STORAGE_KEY)).toBeNull();
+    expect(storage.getItem(PROGRESS_STORAGE_KEY)).toBe(JSON.stringify({ keep: true }));
   });
 
   it('writes one allowlisted payload after opt-in', () => {
@@ -107,6 +109,8 @@ describe('progress storage', () => {
     persistLearningState(state, store);
     expect(storage.getItem(PROGRESS_STORAGE_KEY)).not.toBeNull();
     persistLearningState({ ...state, storageOptIn: false }, store);
+    expect(storage.getItem(PROGRESS_STORAGE_KEY)).not.toBeNull();
+    disablePersistence(store);
     expect(storage.getItem(PROGRESS_STORAGE_KEY)).toBeNull();
   });
 
@@ -115,13 +119,16 @@ describe('progress storage', () => {
     storage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify({
       version: 1,
       missionId: 'cube-track-01',
-      stage: 'folding',
+      stage: 'evidence',
       prediction,
-      foldStepIndex: 1,
+      foldStepIndex: 5,
       diagnosis: null,
       repair: null,
-      evidence: null,
-      attempts: { predictions: [prediction], diagnoses: [], repairs: [], evidence: [] },
+      evidence: { selectedTerms: ['모서리', '겹침'] },
+      attempts: {
+        predictions: [prediction], diagnoses: [], repairs: [],
+        evidence: [{ selectedTerms: ['모서리', '겹침'] }],
+      },
       completedMissionIds: [],
       studentName: 'Ada',
       email: 'ada@example.test',
@@ -131,6 +138,7 @@ describe('progress storage', () => {
     const loaded = createSessionProgressStore(storage).load();
     expect(loaded).not.toBeNull();
     expect(JSON.stringify(loaded)).not.toMatch(/Ada|example|retain|studentName|email|freeText/u);
+    expect(JSON.stringify(loaded)).not.toMatch(/completedSentence|비밀/u);
   });
 
   it('returns null and removes malformed or old-version payloads', () => {
@@ -155,5 +163,120 @@ describe('progress storage', () => {
     expect(progress).not.toHaveProperty('studentNumber');
     expect(progress).not.toHaveProperty('email');
     expect(progress).not.toHaveProperty('freeText');
+    expect(JSON.stringify(progress)).not.toMatch(/completedSentence/u);
+  });
+
+  it('strips the completed sentence from current and attempted evidence', () => {
+    const folded = learningReducer(progressedState(), {
+      type: 'SET_FOLD_STEP',
+      stepIndex: 5,
+    });
+    const evidenced = learningReducer(folded, {
+      type: 'SUBMIT_EVIDENCE',
+      evidence: {
+        selectedTerms: ['면', '접는 방향'],
+        completedSentence: 'Ada 학생 ada@example.test의 문장 원문',
+      },
+    });
+
+    const persisted = toPersistedProgress(evidenced);
+    const serialized = JSON.stringify(persisted);
+    expect(serialized).not.toMatch(/Ada|ada@example|원문|completedSentence/u);
+    expect(persisted.evidence).toEqual({ selectedTerms: ['면', '접는 방향'] });
+    expect(persisted.attempts.evidence).toEqual([{ selectedTerms: ['면', '접는 방향'] }]);
+  });
+
+  it('rewrites a valid payload immediately when unknown fields are present', () => {
+    const storage = new FakeStorage();
+    const store = createSessionProgressStore(storage);
+    const progress = toPersistedProgress(progressedState());
+    const raw = JSON.stringify({ ...progress, name: 'Ada', email: 'ada@example.test' });
+    storage.setItem(PROGRESS_STORAGE_KEY, raw);
+    const setItem = vi.spyOn(storage, 'setItem');
+
+    expect(store.load()).toEqual(progress);
+    expect(setItem).toHaveBeenCalledTimes(1);
+    expect(setItem.mock.calls[0]?.[0]).toBe(PROGRESS_STORAGE_KEY);
+    expect(storage.getItem(PROGRESS_STORAGE_KEY)).toBe(JSON.stringify(progress));
+  });
+
+  it('rejects persisted states that cannot be reached by the reducer', () => {
+    const valid = toPersistedProgress(progressedState());
+    const collisionSelected = learningReducer(createInitialLearningState(), {
+      type: 'SELECT_MISSION',
+      missionId: 'cube-collision-01',
+    });
+    const collisionFolded = learningReducer(collisionSelected, {
+      type: 'SUBMIT_PREDICTION',
+      prediction,
+    });
+    const collisionDiagnosed = learningReducer(
+      learningReducer(collisionFolded, { type: 'SET_FOLD_STEP', stepIndex: 5 }),
+      {
+        type: 'SUBMIT_DIAGNOSIS',
+        diagnosis: {
+          selectedErrorType: 'overlap',
+          selectedFaceIds: ['F2', 'F6'],
+          selectedMissingDirection: '+x',
+        },
+      },
+    );
+    const validRepair = toPersistedProgress(collisionDiagnosed);
+
+    expect(sanitizePersistedProgress({ ...valid, missionId: null })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...valid,
+      prediction: { ...prediction, baseFaceId: 'F2' },
+    })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...valid,
+      prediction: { ...prediction, foldOrder: ['F2', 'F3', 'F5', 'F6', 'F6'] },
+    })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...valid,
+      stage: 'repair',
+      diagnosis: null,
+    })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...valid,
+      stage: 'complete',
+      evidence: null,
+    })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...valid,
+      stage: 'prediction',
+      prediction,
+    })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...valid,
+      stage: 'evidence',
+      foldStepIndex: 5,
+      prediction: null,
+      evidence: { selectedTerms: ['모서리'] },
+    })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...valid,
+      stage: 'repair',
+      foldStepIndex: 5,
+      diagnosis: {
+        selectedErrorType: 'overlap',
+        selectedFaceIds: ['F2', 'F6'],
+        selectedMissingDirection: '+x',
+      },
+    })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...validRepair,
+      repair: { faceId: 'F6', target: { x: 2, y: 1 } },
+    })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...validRepair,
+      repair: { faceId: 'F6', target: { x: 2, y: 1 }, accepted: true },
+    })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...valid,
+      stage: 'complete',
+      foldStepIndex: 5,
+      evidence: { selectedTerms: ['모서리'] },
+    })).toBeNull();
   });
 });

@@ -146,13 +146,13 @@ export interface DiagnosisSubmission {
 
 /**
  * 수리 화면이 계산한 후보를 reducer에 전달하는 최소 기록입니다.
- * `accepted`는 화면 밖의 기하 수리 판정기가 계산할 수 있으며, 생략하면
- * reducer는 제출 자체를 기록하고 다음 근거 단계로 진행합니다.
+ * `accepted`는 화면 밖의 기하 수리 판정기가 계산한 결과이며, 명시적으로
+ * `true`일 때만 다음 근거 단계로 진행합니다.
  */
 export interface RepairSubmission {
   readonly faceId: FaceId;
   readonly target: GridPoint;
-  readonly accepted?: boolean;
+  readonly accepted: boolean;
   readonly candidate?: NetDefinition;
   readonly submittedAtIso?: string;
 }
@@ -175,6 +175,22 @@ export interface LearningAttempts {
   readonly repairs: readonly RepairSubmission[];
   readonly evidence: readonly EvidenceSubmission[];
 }
+
+/** 저장 시에는 학습 문장을 재생성할 수 있으므로 원문을 보관하지 않습니다. */
+export interface PersistedEvidenceSubmission {
+  readonly oppositePair?: OppositePair;
+  readonly selectedTerms: readonly GeometryTerm[];
+}
+
+/** `LearningAttempts`에서 문장 원문을 제거한 저장 전용 구조입니다. */
+export interface PersistedLearningAttempts {
+  readonly predictions: readonly PredictionAttempt[];
+  readonly diagnoses: readonly DiagnosisSubmission[];
+  readonly repairs: readonly RepairSubmission[];
+  readonly evidence: readonly PersistedEvidenceSubmission[];
+}
+
+export type PersistedEvidence = PersistedEvidenceSubmission;
 
 export interface LearningState {
   readonly missionId: MissionId | null;
@@ -243,8 +259,8 @@ export interface PersistedProgress {
   readonly foldStepIndex: number;
   readonly diagnosis: DiagnosisSubmission | null;
   readonly repair: RepairSubmission | null;
-  readonly evidence: EvidenceSubmission | null;
-  readonly attempts: LearningAttempts;
+  readonly evidence: PersistedEvidenceSubmission | null;
+  readonly attempts: PersistedLearningAttempts;
   readonly completedMissionIds: readonly MissionId[];
 }
 

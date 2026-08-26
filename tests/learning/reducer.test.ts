@@ -205,6 +205,50 @@ describe('learning reducer', () => {
     expect(learningReducer(completed, { type: 'COMPLETE_MISSION' })).toBe(completed);
   });
 
+  it('does not allow a repair without an explicit accepted boolean to bypass repair', () => {
+    const diagnosed = learningReducer(foldedCollision(), {
+      type: 'SUBMIT_DIAGNOSIS',
+      diagnosis,
+    });
+    const rejected = learningReducer(diagnosed, {
+      type: 'SUBMIT_REPAIR',
+      repair: { ...repair, accepted: false },
+    });
+    expect(rejected.stage).toBe('repair');
+
+    expect(() => learningReducer(diagnosed, {
+      type: 'SUBMIT_REPAIR',
+      repair: { faceId: 'F6', target: { x: 2, y: 1 } } as RepairSubmission,
+    })).toThrow(InvalidLearningTransitionError);
+  });
+
+  it('requires the missing direction as part of a correct collision diagnosis', () => {
+    const folded = foldedCollision();
+    const withoutDirection = learningReducer(folded, {
+      type: 'SUBMIT_DIAGNOSIS',
+      diagnosis: {
+        selectedErrorType: 'overlap',
+        selectedFaceIds: ['F2', 'F6'],
+      },
+    });
+    expect(withoutDirection.stage).toBe('diagnosis');
+
+    const wrongDirection = learningReducer(folded, {
+      type: 'SUBMIT_DIAGNOSIS',
+      diagnosis: {
+        ...diagnosis,
+        selectedMissingDirection: '-x',
+      },
+    });
+    expect(wrongDirection.stage).toBe('diagnosis');
+
+    const withDirection = learningReducer(withoutDirection, {
+      type: 'SUBMIT_DIAGNOSIS',
+      diagnosis,
+    });
+    expect(withDirection.stage).toBe('repair');
+  });
+
   it('returns to folding without deleting the original prediction or attempts', () => {
     const diagnosed = learningReducer(foldedCollision(), {
       type: 'SUBMIT_DIAGNOSIS',
