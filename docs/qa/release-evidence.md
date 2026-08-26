@@ -72,7 +72,7 @@ release-evidence blocker입니다.
 
 - 원격 저장소: [WBmaker2/net-folding-inspection-center](https://github.com/WBmaker2/net-folding-inspection-center)
 - GitHub Pages: [https://wbmaker2.github.io/net-folding-inspection-center/](https://wbmaker2.github.io/net-folding-inspection-center/)
-- 최종 workflow run: [33022350849](https://github.com/WBmaker2/net-folding-inspection-center/actions/runs/33022350849) — `5717a72` 기준 build/deploy job 모두 성공
+- 검증된 workflow run: [33022350849](https://github.com/WBmaker2/net-folding-inspection-center/actions/runs/33022350849) — `5717a72` 기준 build/deploy job 모두 성공
 - 공개 루트와 [favicon.svg](https://wbmaker2.github.io/net-folding-inspection-center/favicon.svg): HTTP 200
 - 공개 HTML의 문서 제목은 `전개도 포장 검수소`이며 Vite asset 경로는 `/net-folding-inspection-center/` base를 사용합니다.
 - 공개 learner path: 검수 접수 → 면 위치 추적 미션 → 기준면·예상 윗면·접는 순서·방향 입력 → 한 면씩 접기 → 접힌 결과 진단하기까지 완료했습니다.
