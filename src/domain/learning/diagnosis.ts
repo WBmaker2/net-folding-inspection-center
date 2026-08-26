@@ -46,10 +46,40 @@ const sameFrame = (left: FaceFrame, right: FaceFrame): boolean => (
   && sameVec3(left.center, right.center)
 );
 
+const isVec3Shape = (value: unknown): value is Vec3 => (
+  Array.isArray(value)
+  && value.length === 3
+  && value.every((component) => component === -1 || component === 0 || component === 1)
+);
+
+const isFaceId = (value: unknown): value is FaceId => FACE_IDS.includes(value as FaceId);
+
+const isOppositePairShape = (value: unknown): value is { readonly a: FaceId; readonly b: FaceId } => {
+  if (typeof value !== 'object' || value === null) return false;
+  const pair = value as { a?: unknown; b?: unknown };
+  return isFaceId(pair.a) && isFaceId(pair.b) && pair.a !== pair.b;
+};
+
+const isCollisionShape = (value: unknown): boolean => {
+  if (typeof value !== 'object' || value === null) return false;
+  const collision = value as { faceIds?: unknown; normal?: unknown };
+  if (!Array.isArray(collision.faceIds) || collision.faceIds.length !== 2
+    || !isFaceId(collision.faceIds[0]) || !isFaceId(collision.faceIds[1])
+    || collision.faceIds[0] === collision.faceIds[1]) return false;
+  return isVec3Shape(collision.normal);
+};
+
+const isFrameShape = (value: unknown): value is FaceFrame => {
+  if (typeof value !== 'object' || value === null) return false;
+  const frame = value as Partial<FaceFrame>;
+  return isVec3Shape(frame.normal) && isVec3Shape(frame.right)
+    && isVec3Shape(frame.down) && isVec3Shape(frame.center);
+};
+
 /** Optional UI data must not override an independently recomputed result. */
 export const validationMatches = (
-  provided: CubeValidationResult,
-  expected: CubeValidationResult,
+  provided: unknown,
+  expected: unknown,
 ): boolean => {
   if (!isValidationShape(provided) || !isValidationShape(expected)) return false;
   try {
@@ -60,11 +90,14 @@ export const validationMatches = (
       || provided.collisions.some((collision, index) => {
         const expectedCollision = expected.collisions[index];
         return expectedCollision === undefined
-          || !Array.isArray(collision?.faceIds) || collision.faceIds.length !== 2
-          || !Array.isArray(expectedCollision.faceIds) || expectedCollision.faceIds.length !== 2
           || collision.faceIds[0] !== expectedCollision.faceIds[0]
           || collision.faceIds[1] !== expectedCollision.faceIds[1]
           || !sameVec3(collision.normal, expectedCollision.normal);
+      })
+      || provided.oppositePairs.length !== expected.oppositePairs.length
+      || provided.oppositePairs.some((pair, index) => {
+        const expectedPair = expected.oppositePairs[index];
+        return expectedPair === undefined || pair.a !== expectedPair.a || pair.b !== expectedPair.b;
       })) return false;
 
     const expectedEntries = [...expected.frames.entries()];
@@ -83,14 +116,20 @@ export const isValidationShape = (value: unknown): value is CubeValidationResult
     if (typeof value !== 'object' || value === null) return false;
     const candidate = value as Partial<CubeValidationResult>;
     return typeof candidate.isValid === 'boolean'
-      && typeof candidate.reason === 'string'
+      && ['valid', 'invalid-face-count', 'disconnected', 'overlap', 'inconsistent-fold'].includes(candidate.reason ?? '')
       && Array.isArray(candidate.missingNormals)
       && candidate.missingNormals.every((direction) => AXIS_DIRECTIONS.includes(direction as AxisDirection))
       && Array.isArray(candidate.collisions)
+      && candidate.collisions.every(isCollisionShape)
+      && Array.isArray(candidate.oppositePairs)
+      && candidate.oppositePairs.every(isOppositePairShape)
       && candidate.frames !== null
       && candidate.frames !== undefined
       && typeof candidate.frames.size === 'number'
-      && typeof candidate.frames.get === 'function';
+      && Number.isSafeInteger(candidate.frames.size)
+      && typeof candidate.frames.get === 'function'
+      && typeof candidate.frames.entries === 'function'
+      && [...candidate.frames.entries()].every(([faceId, frame]) => isFaceId(faceId) && isFrameShape(frame));
   } catch {
     return false;
   }
