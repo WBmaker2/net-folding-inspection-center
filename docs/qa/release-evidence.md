@@ -36,6 +36,10 @@ sandbox 밖의 승인된 escalated standalone 실행에서는 focused/full E2E�
 | 03:09:50–03:10:17 | `npm run test:e2e` (관리형 sandbox 밖, escalated) | PASS — 20/20 |
 | 03:10:25–03:10:31 | `npm test -- --run` | PASS — 29 files, 238 tests |
 | 03:11:07–03:11:50 | 최종 `npm run verify` (관리형 sandbox 밖, escalated) | PASS — lint/type/unit 238 tests/E2E 20/20/file-size/offline/build 모두 통과 |
+| 03:37:58–03:38:06 | `npm test -- --run` | PASS — 29 files, 246 tests |
+| 03:40:24–03:40:33 | `npx playwright test e2e/learner-flow.spec.ts --workers=1` | PASS — 5/5 (불가능 순서 복귀·수정 재제출 회귀 포함) |
+| 03:40:38–03:41:06 | `npm run test:e2e` | PASS — 21/21, 단일 worker |
+| 03:41–03:42 | 최종 `npm run verify` (관리형 sandbox 밖, escalated) | PASS — lint/type/unit 246 tests/E2E 21/21/file-size/offline/build 모두 통과 |
 
 ## 고정 환경 결과
 
@@ -73,4 +77,5 @@ release-evidence blocker입니다.
 ## 범위 경계
 
 원격 저장소 생성, push, GitHub Pages 공개, 서비스 등록 또는 배포를 수행하지
-않았습니다.
+않았습니다. 최종 수정 wave에서 불가능한 접기 순서의 복귀·재제출과 중첩 symbolic
+link fail-closed 경계를 추가했습니다.

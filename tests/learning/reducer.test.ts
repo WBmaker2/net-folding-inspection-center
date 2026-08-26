@@ -44,6 +44,10 @@ const f2BasePrediction: PredictionRecord = {
     F1: 'south', F3: 'north', F5: 'west', F6: 'east', F4: 'south',
   },
 };
+const impossiblePrediction: PredictionRecord = {
+  ...prediction,
+  foldOrder: ['F3', 'F2', 'F5', 'F6', 'F4'],
+};
 
 const diagnosis: DiagnosisSubmission = {
   selectedErrorType: 'overlap',
@@ -132,6 +136,50 @@ describe('learning reducer', () => {
     expect(predicted.attempts.predictions[0]).toEqual(prediction);
     expect(JSON.stringify(predicted.attempts.predictions[0])).not.toMatch(/score|점수/u);
     expect(canRevealFoldResult(predicted)).toBe(true);
+  });
+
+  it('returns an impossible fold order to prediction without deleting its attempt', () => {
+    const selected = learningReducer(createInitialLearningState(), {
+      type: 'SELECT_MISSION', missionId: 'cube-track-01',
+    });
+    const folded = learningReducer(selected, {
+      type: 'SUBMIT_PREDICTION', prediction: impossiblePrediction,
+    });
+
+    expect(folded.stage).toBe('folding');
+    expect(getCriticalActionId(folded)).toBe('return-to-prediction');
+    const contextual = {
+      ...folded,
+      storageOptIn: true,
+      completedMissionIds: ['cube-opposite-01'] as const,
+    };
+    const returned = learningReducer(contextual, {
+      type: 'RETURN_TO_PREDICTION', missionId: 'cube-track-01',
+    });
+    expect(returned).toMatchObject({
+      missionId: 'cube-track-01', stage: 'prediction', prediction: null,
+      foldStepIndex: 0, diagnosis: null, repair: null, evidence: null,
+      attempts: { predictions: [impossiblePrediction] },
+    });
+    expect(returned.storageOptIn).toBe(true);
+    expect(returned.completedMissionIds).toEqual(['cube-opposite-01']);
+  });
+
+  it('rejects prediction recovery for valid folds, stale missions, and other stages', () => {
+    const selected = learningReducer(createInitialLearningState(), {
+      type: 'SELECT_MISSION', missionId: 'cube-track-01',
+    });
+    const valid = learningReducer(selected, { type: 'SUBMIT_PREDICTION', prediction });
+    expect(() => learningReducer(valid, {
+      type: 'RETURN_TO_PREDICTION', missionId: 'cube-track-01',
+    })).toThrow(InvalidLearningTransitionError);
+    expect(() => learningReducer(
+      learningReducer(selected, { type: 'SUBMIT_PREDICTION', prediction: impossiblePrediction }),
+      { type: 'RETURN_TO_PREDICTION', missionId: 'cube-opposite-01' },
+    )).toThrow(StaleLearningActionError);
+    expect(() => learningReducer(selected, {
+      type: 'RETURN_TO_PREDICTION', missionId: 'cube-track-01',
+    })).toThrow(InvalidLearningTransitionError);
   });
 
   it('requires exactly one valid fold direction for every moving face', () => {

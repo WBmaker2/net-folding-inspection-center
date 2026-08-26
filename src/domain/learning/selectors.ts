@@ -2,6 +2,8 @@ import { evaluateDiagnosis } from './diagnosis';
 import { evaluateEvidenceSubmission } from './evidence';
 import { evaluateRepair } from './repair';
 import { validateCubeNet } from '../net/validateCubeNet';
+import { createFoldSequence } from '../net/foldEngine';
+import { getMissionById } from '../../content/missions/catalog';
 import type {
   AchievementEvidence,
   AchievementStatus,
@@ -27,8 +29,16 @@ export const getCriticalActionId = (state: LearningState): CriticalActionId => {
       return 'select-mission';
     case 'prediction':
       return 'submit-prediction';
-    case 'folding':
-      return 'next-fold';
+    case 'folding': {
+      if (state.missionId === null || state.prediction === null) return 'return-to-prediction';
+      try {
+        const mission = getMissionById(state.missionId);
+        createFoldSequence(mission.net, state.prediction.baseFaceId, state.prediction.foldOrder);
+        return 'next-fold';
+      } catch {
+        return 'return-to-prediction';
+      }
+    }
     case 'diagnosis':
       return 'submit-diagnosis';
     case 'repair':

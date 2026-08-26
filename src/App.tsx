@@ -69,6 +69,10 @@ export function App(): React.JSX.Element {
           validation={validation ?? undefined}
           initialStepIndex={state.foldStepIndex}
           criticalActionId={criticalActionId}
+          onReturnToPrediction={() => controller.dispatch({
+            type: 'RETURN_TO_PREDICTION',
+            missionId: mission.id,
+          })}
           onStepChange={(stepIndex) => controller.dispatch({
             type: 'SET_FOLD_STEP',
             stepIndex,

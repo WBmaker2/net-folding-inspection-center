@@ -37,8 +37,12 @@ async function collectTextFiles(directory, root, files = []) {
   }
   for (const entry of entries.sort((left, right) => left.name.localeCompare(right.name))) {
     const absolute = path.join(directory, entry.name);
-    // Symlinks are deliberately not followed: src cannot smuggle files from outside the repo.
-    if (entry.isSymbolicLink()) continue;
+    // Every link is rejected at the link itself. Never inspect or follow its target.
+    if (entry.isSymbolicLink()) {
+      throw new Error(
+        `Offline boundary check rejects symbolic link under src: ${path.relative(root, absolute)}`,
+      );
+    }
     if (entry.isDirectory()) {
       await collectTextFiles(absolute, root, files);
     } else if (entry.isFile()) {

@@ -91,4 +91,36 @@ describe('offline boundary checker', () => {
       await rm(target, { recursive: true, force: true });
     }
   });
+
+  it('rejects a nested file symlink, including a clean target, by repo-relative link path', async () => {
+    const target = await mkdtemp(path.join(tmpdir(), 'nfic-offline-target-'));
+    const root = await mkdtemp(path.join(tmpdir(), 'nfic-offline-root-'));
+    try {
+      await mkdir(path.join(root, 'src', 'nested'), { recursive: true });
+      await writeFile(path.join(target, 'clean.ts'), 'export const local = true;');
+      await symlink(path.join(target, 'clean.ts'), path.join(root, 'src', 'nested', 'linked.ts'));
+      expect(() => scanAt(root)).toThrow(
+        /rejects symbolic link under src: src\/nested\/linked\.ts/u,
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(target, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a nested directory symlink without fetching its hidden target', async () => {
+    const target = await mkdtemp(path.join(tmpdir(), 'nfic-offline-target-'));
+    const root = await mkdtemp(path.join(tmpdir(), 'nfic-offline-root-'));
+    try {
+      await mkdir(path.join(root, 'src', 'nested'), { recursive: true });
+      await writeFile(path.join(target, 'hidden.ts'), 'fetch("outside")');
+      await symlink(target, path.join(root, 'src', 'nested', 'linked-dir'));
+      expect(() => scanAt(root)).toThrow(
+        /rejects symbolic link under src: src\/nested\/linked-dir/u,
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(target, { recursive: true, force: true });
+    }
+  });
 });

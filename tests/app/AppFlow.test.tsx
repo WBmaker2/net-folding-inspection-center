@@ -12,12 +12,15 @@ const missionButton = (title: string): HTMLElement => (
   screen.getByRole('button', { name: `${title} 미션 선택` })
 );
 
-const choosePrediction = async (user: ReturnType<typeof userEvent.setup>, topFace: number): Promise<void> => {
+const choosePrediction = async (
+  user: ReturnType<typeof userEvent.setup>,
+  topFace: number,
+  order: readonly number[] = [2, 3, 5, 6, 4],
+): Promise<void> => {
   const baseGrid = screen.getByRole('group', { name: '기준면 선택 전개도' });
   await user.click(within(baseGrid).getByRole('button', { name: /^1번 면/ }));
   const topGrid = screen.getByRole('group', { name: '예상 윗면 선택 전개도' });
   await user.click(within(topGrid).getByRole('button', { name: new RegExp(`^${topFace}번 면`) }));
-  const order = [2, 3, 5, 6, 4];
   for (const face of order) {
     await user.click(screen.getByRole('button', { name: `접는 순서에 ${face}번 면 추가` }));
   }
@@ -105,6 +108,24 @@ describe('Task 13 integrated learner flow', () => {
     await user.click(screen.getByRole('button', { name: '미션 완료 확인' }));
     expect(screen.getByRole('heading', { name: '검수 완료' })).toBeVisible();
     expectOnePulse('다음 미션');
+  });
+
+  it('recovers from an impossible fold order and accepts a corrected prediction', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(missionButton('면 위치 추적 1'));
+    await choosePrediction(user, 3, [3, 2, 5, 6, 4]);
+    expect(screen.getByRole('alert')).toHaveTextContent('이 예측한 순서로는 접기 단계를 만들 수 없습니다.');
+    expect(screen.queryByText(/정답 순서|F3.*F2/u)).not.toBeInTheDocument();
+    expectOnePulse('예측판으로 돌아가 다시 고르기');
+    await user.click(screen.getByRole('button', { name: '예측판으로 돌아가 다시 고르기' }));
+    expect(screen.getByRole('heading', { name: '예측판' })).toBeVisible();
+    await choosePrediction(user, 3);
+    expect(screen.getByRole('heading', { name: '한 면씩 접기' })).toBeVisible();
+    for (let step = 0; step < 5; step += 1) {
+      await user.click(screen.getByRole('button', { name: '다음 면 접기' }));
+    }
+    expect(screen.getByRole('heading', { name: '접힌 결과 진단하기' })).toBeVisible();
   });
 
   it('completes the opposite path without exposing diagnosis', async () => {

@@ -19,6 +19,7 @@ import type {
   RepairSubmission,
 } from './types';
 import { isIsoInstant } from './timestamps';
+import { createFoldSequence } from '../net/foldEngine';
 const FOLD_STEP_COUNT = 5;
 const FOLD_DIRECTIONS = ['north', 'east', 'south', 'west'] as const;
 const AXIS_DIRECTIONS: readonly AxisDirection[] = ['+x', '-x', '+y', '-y', '+z', '-z'];
@@ -454,6 +455,27 @@ export const learningReducer = (
         ...state,
         stage: 'folding',
         foldStepIndex: stepIndex,
+        diagnosis: null,
+        repair: null,
+        evidence: null,
+      });
+    }
+    case 'RETURN_TO_PREDICTION': {
+      assertMissionScope(state, action);
+      assertActiveStage(state, action, 'folding');
+      if (state.prediction === null) {
+        throw new PredictionRequiredError(action.type, state.stage);
+      }
+      const mission = missionFor(state, action);
+      let sequenceFailed = false;
+      try { createFoldSequence(mission.net, state.prediction.baseFaceId, state.prediction.foldOrder); }
+      catch { sequenceFailed = true; }
+      if (!sequenceFailed) throw transitionError(state, action, 'Prediction recovery requires a failed fold sequence');
+      return freezeState({
+        ...state,
+        stage: 'prediction',
+        prediction: null,
+        foldStepIndex: 0,
         diagnosis: null,
         repair: null,
         evidence: null,

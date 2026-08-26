@@ -276,6 +276,12 @@ const attemptsAreEmpty = (attempts: PersistedLearningAttempts): boolean => (
   && attempts.evidence.length === 0
 );
 
+const reviewAttemptsAreEmpty = (attempts: PersistedLearningAttempts): boolean => (
+  attempts.diagnoses.length === 0
+  && attempts.repairs.length === 0
+  && attempts.evidence.length === 0
+);
+
 /** Sanitizers emit deterministic key order, so JSON is a stable structural comparison here. */
 const structurallyEqual = (left: unknown, right: unknown): boolean => (
   JSON.stringify(left) === JSON.stringify(right)
@@ -323,7 +329,7 @@ const isReachableProgress = (
     return prediction === null
       && foldStepIndex === 0
       && hasNoReviewData(diagnosis, repair, evidence)
-      && attemptsAreEmpty(attempts);
+      && reviewAttemptsAreEmpty(attempts);
   }
   const diagnosisRequired = mission.kind !== 'opposite'
     && (stage === 'repair' || stage === 'evidence' || stage === 'complete');
@@ -331,7 +337,7 @@ const isReachableProgress = (
     && (stage === 'evidence' || stage === 'complete');
   const evidenceRequired = stage === 'complete';
   if (prediction === null
-    || attempts.predictions.length !== 1
+    || attempts.predictions.length < 1
     || !structurallyEqual(prediction, attempts.predictions[attempts.predictions.length - 1])
     || !matchesCurrentAttempt(diagnosis, attempts.diagnoses, diagnosisRequired)
     || !matchesCurrentAttempt(repair, attempts.repairs, repairRequired)

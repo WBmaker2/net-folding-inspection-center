@@ -21,6 +21,7 @@ export interface FoldingScreenProps {
   readonly onStepChange?: (stepIndex: number) => void;
   readonly onComplete?: () => void;
   readonly onContinue?: () => void;
+  readonly onReturnToPrediction?: () => void;
   readonly criticalActionId?: CriticalActionId;
 }
 
@@ -38,6 +39,7 @@ export function FoldingScreen({
   onStepChange,
   onComplete,
   onContinue,
+  onReturnToPrediction,
   criticalActionId,
 }: FoldingScreenProps): React.JSX.Element {
   const reducedMotion = usePrefersReducedMotion();
@@ -78,6 +80,13 @@ export function FoldingScreen({
         <p className="eyebrow">접기실 · 2D 관계 보기</p>
         <h1 id="folding-title">한 면씩 접기</h1>
         <p className="field-error" role="alert">이 예측한 순서로는 접기 단계를 만들 수 없습니다.</p>
+        <PrimaryAction
+          actionId="return-to-prediction"
+          criticalActionId={criticalActionId}
+          onClick={onReturnToPrediction}
+        >
+          예측판으로 돌아가 다시 고르기
+        </PrimaryAction>
         <p className="model-note" id="folding-model-boundary">
           이 가상 접기는 면의 연결 관계를 보여 주는 기하 모형이며 실제 종이의 두께·휘어짐·포장 강도·안전성을 보장하지 않습니다.
         </p>

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import { getMissionById } from '../../src/content/missions/catalog';
 import type { LearningState } from '../../src/domain/learning/types';
 import { CompletionScreen } from '../../src/screens/CompletionScreen';
@@ -34,5 +34,35 @@ describe('CompletionScreen', () => {
     expect(screen.getByRole('table', { name: '수정 전후 학습 기록' })).toHaveTextContent('비어 있는 방향: -x');
     expect(screen.getByRole('table', { name: '수정 전후 학습 기록' })).toHaveTextContent('비어 있는 방향: +x');
     expect(screen.getByRole('table', { name: '수정 전후 학습 기록' })).not.toHaveTextContent('undefined');
+  });
+
+  it('compares the first prediction with the corrected current prediction', () => {
+    const mission = getMissionById('cube-track-01');
+    const firstPrediction = {
+      baseFaceId: 'F1' as const,
+      predictedTopFaceId: 'F2' as const,
+      foldOrder: ['F3', 'F2', 'F5', 'F6', 'F4'] as const,
+      arrowByFace: { F2: 'north' as const, F3: 'north' as const, F5: 'west' as const, F6: 'east' as const, F4: 'south' as const },
+      submittedAtIso: '2026-08-26T00:00:00.000Z',
+    };
+    const correctedPrediction = { ...firstPrediction, predictedTopFaceId: 'F3' as const };
+    const state: LearningState = {
+      missionId: mission.id,
+      stage: 'complete',
+      prediction: correctedPrediction,
+      foldStepIndex: 5,
+      diagnosis: { selectedErrorType: 'decoration-direction', selectedFaceIds: ['F3'] },
+      repair: null,
+      evidence: null,
+      attempts: {
+        predictions: [firstPrediction, correctedPrediction],
+        diagnoses: [], repairs: [], evidence: [],
+      },
+      storageOptIn: false,
+      completedMissionIds: [mission.id],
+    };
+    render(<CompletionScreen mission={mission} state={state} />);
+    const comparison = screen.getByRole('table', { name: '수정 전후 학습 기록' });
+    expect(within(comparison).getByRole('row', { name: /예측.*F2.*F3/u })).toBeVisible();
   });
 });

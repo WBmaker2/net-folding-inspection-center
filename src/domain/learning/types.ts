@@ -257,6 +257,7 @@ export type LearningAction =
     readonly stepIndex?: number;
     readonly missionId?: MissionId;
   }
+  | { readonly type: 'RETURN_TO_PREDICTION'; readonly missionId?: MissionId }
   | { readonly type: 'SET_STORAGE_OPT_IN'; readonly enabled: boolean }
   | { readonly type: 'RESET_MISSION' };
 
@@ -267,7 +268,8 @@ export type CriticalActionId =
   | 'submit-diagnosis'
   | 'confirm-repair'
   | 'submit-evidence'
-  | 'next-mission';
+  | 'next-mission'
+  | 'return-to-prediction';
 
 /** The current sessionStorage schema. 개인정보 필드는 없습니다. */
 export interface PersistedProgress {

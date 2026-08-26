@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { createInitialLearningState, learningReducer } from '../../src/domain/learning/reducer';
-import { sanitizePersistedProgress, toPersistedProgress } from '../../src/domain/learning/storage';
+import {
+  createMemoryProgressStore,
+  rehydratePersistedProgress,
+  sanitizePersistedProgress,
+  toPersistedProgress,
+} from '../../src/domain/learning/storage';
 import type { PredictionRecord } from '../../src/domain/net/types';
 
 const prediction: PredictionRecord = {
@@ -33,6 +38,28 @@ describe('persisted reachability', () => {
     });
     expect(diagnosed.stage).toBe('evidence');
     expect(sanitizePersistedProgress(toPersistedProgress(diagnosed))).not.toBeNull();
+  });
+
+  it('accepts prediction-stage history after recovery and multiple predictions in folding', () => {
+    const selected = learningReducer(createInitialLearningState(), {
+      type: 'SELECT_MISSION', missionId: 'cube-track-01',
+    });
+    const impossible = { ...prediction, foldOrder: ['F3', 'F2', 'F5', 'F6', 'F4'] as const };
+    const recovered = learningReducer(
+      learningReducer(selected, { type: 'SUBMIT_PREDICTION', prediction: impossible }),
+      { type: 'RETURN_TO_PREDICTION', missionId: 'cube-track-01' },
+    );
+    const optedIn = learningReducer(recovered, { type: 'SET_STORAGE_OPT_IN', enabled: true });
+    const store = createMemoryProgressStore();
+    store.save(toPersistedProgress(optedIn));
+    const restored = rehydratePersistedProgress(store.load()!);
+    expect(restored?.stage).toBe('prediction');
+    expect(restored?.storageOptIn).toBe(true);
+    expect(restored?.attempts.predictions).toHaveLength(1);
+    const corrected = learningReducer(restored!, { type: 'SUBMIT_PREDICTION', prediction });
+    const persisted = toPersistedProgress(corrected);
+    expect(persisted.attempts.predictions).toHaveLength(2);
+    expect(sanitizePersistedProgress(persisted)).not.toBeNull();
   });
 
   it('rejects states that cannot be reached by the reducer', () => {

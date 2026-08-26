@@ -317,7 +317,7 @@ describe('progress storage', () => {
     });
   });
 
-  it('requires prediction stage current and attempts to be completely empty', () => {
+  it('allows prediction-stage history while keeping current review data empty', () => {
     const selected = learningReducer(createInitialLearningState(), {
       type: 'SELECT_MISSION',
       missionId: 'cube-track-01',
@@ -329,7 +329,7 @@ describe('progress storage', () => {
     expect(sanitizePersistedProgress({
       ...valid,
       attempts: { ...valid.attempts, predictions: [prediction] },
-    })).toBeNull();
+    })).not.toBeNull();
     expect(sanitizePersistedProgress({
       ...valid,
       diagnosis: {
@@ -346,9 +346,10 @@ describe('progress storage', () => {
       ...valid,
       attempts: { ...valid.attempts, predictions: [] },
     })).toBeNull();
+    const changedPrediction = { ...prediction, predictedTopFaceId: 'F2' as const };
     expect(sanitizePersistedProgress({
       ...valid,
-      attempts: { ...valid.attempts, predictions: [prediction, prediction] },
+      attempts: { ...valid.attempts, predictions: [prediction, changedPrediction] },
     })).toBeNull();
     expect(sanitizePersistedProgress({
       ...valid,

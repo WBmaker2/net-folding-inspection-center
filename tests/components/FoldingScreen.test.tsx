@@ -190,6 +190,22 @@ describe('FoldingScreen', () => {
     expect(document.getElementById('folding-model-boundary')).toHaveTextContent('실제 종이의 두께');
   });
 
+  it('offers one pulsing recovery action for an impossible prediction', async () => {
+    const user = userEvent.setup();
+    const onReturnToPrediction = vi.fn();
+    renderFolding({
+      prediction: { ...prediction, foldOrder: ['F3', 'F2', 'F5', 'F6', 'F4'] },
+      onReturnToPrediction,
+      criticalActionId: 'return-to-prediction',
+    });
+    const action = screen.getByRole('button', { name: '예측판으로 돌아가 다시 고르기' });
+    expect(action).toHaveClass('gi-pulse');
+    expect(document.querySelectorAll('.gi-pulse')).toHaveLength(1);
+    await user.click(action);
+    expect(onReturnToPrediction).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/F[1-6]/u)).not.toBeInTheDocument();
+  });
+
   it('subscribes to matchMedia changes and cleans up the modern listener', async () => {
     const originalMatchMedia = window.matchMedia;
     let changeListener: (() => void) | undefined;
