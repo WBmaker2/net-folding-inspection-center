@@ -140,6 +140,28 @@ describe('learning reducer', () => {
     });
   });
 
+  it('copies only mission-scoped arrow keys into the immutable prediction record', () => {
+    const selected = learningReducer(createInitialLearningState(), {
+      type: 'SELECT_MISSION',
+      missionId: 'cube-track-01',
+    });
+    const nonEnumerableArrows = { ...prediction.arrowByFace };
+    Object.defineProperty(nonEnumerableArrows, 'F4', {
+      value: prediction.arrowByFace.F4,
+      enumerable: false,
+    });
+
+    const predicted = learningReducer(selected, {
+      type: 'SUBMIT_PREDICTION',
+      prediction: {
+        ...prediction,
+        arrowByFace: nonEnumerableArrows,
+      },
+    });
+    expect(predicted.prediction?.arrowByFace).toEqual(prediction.arrowByFace);
+    expect(predicted.attempts.predictions[0]?.arrowByFace).toEqual(prediction.arrowByFace);
+  });
+
   it('advances through five folds and chooses the post-fold branch by mission kind', () => {
     const tracking = learningReducer(
       learningReducer(createInitialLearningState(), {

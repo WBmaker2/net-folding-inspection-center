@@ -6,11 +6,11 @@ import {
   persistLearningState,
   PROGRESS_STORAGE_KEY,
   sanitizePersistedProgress,
+  syncLearningPersistence,
   toPersistedProgress,
 } from '../../src/domain/learning/storage';
 import { createInitialLearningState, learningReducer } from '../../src/domain/learning/reducer';
 import type { PersistedProgress } from '../../src/domain/learning/types';
-
 const prediction = {
   baseFaceId: 'F1' as const,
   predictedTopFaceId: 'F3' as const,
@@ -24,35 +24,27 @@ const prediction = {
   },
   submittedAtIso: '2026-08-26T00:00:00.000Z',
 };
-
 class FakeStorage implements Storage {
   private readonly values = new Map<string, string>();
-
   get length(): number {
     return this.values.size;
   }
-
   clear(): void {
     this.values.clear();
   }
-
   getItem(key: string): string | null {
     return this.values.get(key) ?? null;
   }
-
   key(index: number): string | null {
     return [...this.values.keys()][index] ?? null;
   }
-
   removeItem(key: string): void {
     this.values.delete(key);
   }
-
   setItem(key: string, value: string): void {
     this.values.set(key, value);
   }
 }
-
 const progressedState = () => {
   const selected = learningReducer(createInitialLearningState(), {
     type: 'SELECT_MISSION',
@@ -63,13 +55,11 @@ const progressedState = () => {
     prediction,
   });
 };
-
 const collisionDiagnosis = {
   selectedErrorType: 'overlap' as const,
   selectedFaceIds: ['F2', 'F6'] as const,
   selectedMissingDirection: '+x' as const,
 };
-
 const collisionFoldedState = () => learningReducer(
   learningReducer(
     learningReducer(createInitialLearningState(), {
@@ -80,12 +70,10 @@ const collisionFoldedState = () => learningReducer(
   ),
   { type: 'SET_FOLD_STEP', stepIndex: 5 },
 );
-
 const collisionRepairState = () => learningReducer(collisionFoldedState(), {
   type: 'SUBMIT_DIAGNOSIS',
   diagnosis: collisionDiagnosis,
 });
-
 const collisionEvidenceState = () => learningReducer(
   learningReducer(collisionRepairState(), {
     type: 'SUBMIT_REPAIR',
@@ -99,7 +87,6 @@ const collisionEvidenceState = () => learningReducer(
     },
   },
 );
-
 describe('progress storage', () => {
   it('keeps the default memory store in memory only', () => {
     const store = createMemoryProgressStore();
@@ -110,7 +97,6 @@ describe('progress storage', () => {
     store.clear();
     expect(store.load()).toBeNull();
   });
-
   it('does not touch session storage before explicit opt-in', () => {
     const storage = new FakeStorage();
     const store = createSessionProgressStore(storage);
@@ -121,7 +107,6 @@ describe('progress storage', () => {
     expect(setItem).not.toHaveBeenCalled();
     expect(storage.getItem(PROGRESS_STORAGE_KEY)).toBe(JSON.stringify({ keep: true }));
   });
-
   it('writes one allowlisted payload after opt-in', () => {
     const storage = new FakeStorage();
     const setItem = vi.spyOn(storage, 'setItem');
@@ -136,7 +121,6 @@ describe('progress storage', () => {
     expect(saved).toMatchObject({ version: 1, missionId: 'cube-track-01' });
     expect(JSON.stringify(saved)).not.toMatch(/name|student|email|free.?text|score|점수|이름|학번|이메일/u);
   });
-
   it('clears the exact key as soon as opt-in is revoked', () => {
     const storage = new FakeStorage();
     const store = createSessionProgressStore(storage);
@@ -147,6 +131,36 @@ describe('progress storage', () => {
     persistLearningState({ ...state, storageOptIn: false }, store);
     expect(storage.getItem(PROGRESS_STORAGE_KEY)).not.toBeNull();
     disablePersistence(store);
+    expect(storage.getItem(PROGRESS_STORAGE_KEY)).toBeNull();
+  });
+
+  it('syncs persistence transitions and clears only on an explicit true-to-false edge', () => {
+    const storage = new FakeStorage();
+    const store = createSessionProgressStore(storage);
+    const previous = progressedState();
+    const optedIn = learningReducer(previous, {
+      type: 'SET_STORAGE_OPT_IN',
+      enabled: true,
+    });
+    const optedOut = learningReducer(optedIn, {
+      type: 'SET_STORAGE_OPT_IN',
+      enabled: false,
+    });
+    storage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify({ keep: true }));
+    const setItem = vi.spyOn(storage, 'setItem');
+    const removeItem = vi.spyOn(storage, 'removeItem');
+
+    syncLearningPersistence(null, previous, store);
+    expect(setItem).not.toHaveBeenCalled();
+    expect(removeItem).not.toHaveBeenCalled();
+    expect(storage.getItem(PROGRESS_STORAGE_KEY)).toBe(JSON.stringify({ keep: true }));
+
+    syncLearningPersistence(previous, optedIn, store);
+    expect(setItem).toHaveBeenCalledTimes(1);
+    syncLearningPersistence(optedIn, optedIn, store);
+    expect(setItem).toHaveBeenCalledTimes(2);
+    syncLearningPersistence(optedIn, optedOut, store);
+    expect(removeItem).toHaveBeenCalledTimes(1);
     expect(storage.getItem(PROGRESS_STORAGE_KEY)).toBeNull();
   });
 
@@ -189,7 +203,6 @@ describe('progress storage', () => {
     storage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify({ version: 2 }));
     expect(store.load()).toBeNull();
   });
-
   it('does not expose state-only fields in the persisted progress contract', () => {
     const state = progressedState();
     const progress: PersistedProgress = toPersistedProgress(state);
@@ -258,6 +271,10 @@ describe('progress storage', () => {
     expect(sanitizePersistedProgress({
       ...valid,
       attempts: { ...valid.attempts, predictions: [] },
+    })).toBeNull();
+    expect(sanitizePersistedProgress({
+      ...valid,
+      attempts: { ...valid.attempts, predictions: [prediction, prediction] },
     })).toBeNull();
     expect(sanitizePersistedProgress({
       ...valid,

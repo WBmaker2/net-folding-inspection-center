@@ -3,6 +3,7 @@ import { validateCubeNet } from '../net/validateCubeNet';
 import type {
   AxisDirection,
   FaceId,
+  FoldDirection,
   GridPoint,
   LearningAction,
   LearningAttempts,
@@ -14,14 +15,12 @@ import type {
   EvidenceSubmission,
   RepairSubmission,
 } from './types';
-
 const FOLD_STEP_COUNT = 5;
 const FOLD_DIRECTIONS = ['north', 'east', 'south', 'west'] as const;
 const AXIS_DIRECTIONS: readonly AxisDirection[] = ['+x', '-x', '+y', '-y', '+z', '-z'];
 const DIAGNOSIS_TYPES = ['overlap', 'missing-face', 'decoration-direction'] as const;
 const GEOMETRY_TERMS = ['맞은편', '모서리', '면', '접는 방향', '겹침', '빈 면'] as const;
 const FACE_IDS: readonly FaceId[] = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6'];
-
 export class LearningTransitionError extends Error {
   readonly actionType: LearningAction['type'];
   readonly stage: LearningState['stage'];
@@ -37,43 +36,51 @@ export class LearningTransitionError extends Error {
     this.stage = stage;
   }
 }
-
 export class InvalidLearningTransitionError extends LearningTransitionError {
   constructor(message: string, actionType: LearningAction['type'], stage: LearningState['stage']) {
     super(message, actionType, stage);
     this.name = 'InvalidLearningTransitionError';
   }
 }
-
 export class PredictionRequiredError extends LearningTransitionError {
   constructor(actionType: LearningAction['type'], stage: LearningState['stage']) {
     super('A prediction is required before the fold result can be revealed', actionType, stage);
     this.name = 'PredictionRequiredError';
   }
 }
-
 export class StaleLearningActionError extends LearningTransitionError {
   constructor(actionType: LearningAction['type'], stage: LearningState['stage']) {
     super('The action belongs to a different mission', actionType, stage);
     this.name = 'StaleLearningActionError';
   }
 }
-
 /** Backwards-compatible name for callers that classify malformed actions. */
 export { InvalidLearningTransitionError as InvalidLearningActionError };
-
 const freezeArray = <T>(items: readonly T[]): readonly T[] => Object.freeze([...items]);
 
 const freezePoint = (point: GridPoint): GridPoint => Object.freeze({ x: point.x, y: point.y });
 
-const clonePrediction = (prediction: PredictionRecord): PredictionRecord => Object.freeze({
-  baseFaceId: prediction.baseFaceId,
-  predictedTopFaceId: prediction.predictedTopFaceId,
-  foldOrder: freezeArray(prediction.foldOrder),
-  arrowByFace: Object.freeze({ ...prediction.arrowByFace }),
-  submittedAtIso: prediction.submittedAtIso,
-});
-
+const movingFaceIdsFor = (mission: MissionDefinition): readonly FaceId[] => (
+  mission.net.faces
+    .map((face) => face.id)
+    .filter((faceId) => faceId !== mission.baseFaceId)
+);
+const clonePrediction = (
+  prediction: PredictionRecord,
+  mission: MissionDefinition,
+): PredictionRecord => {
+  const arrowByFace: Partial<Record<FaceId, FoldDirection>> = {};
+  movingFaceIdsFor(mission).forEach((faceId) => {
+    arrowByFace[faceId] = prediction.arrowByFace[faceId] as FoldDirection;
+  });
+  return Object.freeze({
+    baseFaceId: prediction.baseFaceId,
+    predictedTopFaceId: prediction.predictedTopFaceId,
+    foldOrder: freezeArray(prediction.foldOrder),
+    arrowByFace: Object.freeze(arrowByFace),
+    submittedAtIso: prediction.submittedAtIso,
+  });
+};
 const cloneDiagnosis = (diagnosis: DiagnosisSubmission): DiagnosisSubmission => Object.freeze({
   selectedErrorType: diagnosis.selectedErrorType,
   selectedFaceIds: freezeArray(diagnosis.selectedFaceIds),
@@ -228,7 +235,7 @@ const validatePrediction = (
   if (typeof value.submittedAtIso !== 'string' || value.submittedAtIso.trim().length === 0) {
     throw transitionError(state, action, 'The prediction timestamp is required');
   }
-  return clonePrediction(value);
+  return clonePrediction(value, mission);
 };
 
 const validateDiagnosis = (

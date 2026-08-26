@@ -18,11 +18,9 @@ import type {
   ProgressStore,
   RepairSubmission,
 } from './types';
-
 export const PROGRESS_STORAGE_KEY = 'nfic.progress.v1';
 /** Alias kept short for storage adapters that use a generic key name. */
 export const PROGRESS_KEY = PROGRESS_STORAGE_KEY;
-
 const MISSION_IDS: readonly MissionId[] = [
   'cube-track-01', 'cube-track-02',
   'cube-opposite-01', 'cube-opposite-02',
@@ -37,9 +35,7 @@ const LEARNING_STAGES = [
   'intake', 'prediction', 'folding', 'diagnosis', 'repair', 'evidence', 'complete',
 ] as const;
 const GEOMETRY_TERMS = ['맞은편', '모서리', '면', '접는 방향', '겹침', '빈 면'] as const;
-
 type RecordValue = Record<string, unknown>;
-
 const isRecord = (value: unknown): value is RecordValue => (
   typeof value === 'object' && value !== null && !Array.isArray(value)
 );
@@ -68,7 +64,6 @@ const movingFacesFor = (mission: MissionDefinition): readonly FaceId[] => (
     .map((face) => face.id)
     .filter((faceId) => faceId !== mission.baseFaceId)
 );
-
 const sanitizeArrowByFace = (
   value: unknown,
   mission: MissionDefinition,
@@ -94,7 +89,6 @@ const sanitizeArrowByFace = (
   }
   return arrowByFace;
 };
-
 const sanitizePrediction = (
   value: unknown,
   mission: MissionDefinition,
@@ -117,7 +111,6 @@ const sanitizePrediction = (
     submittedAtIso: value.submittedAtIso,
   };
 };
-
 const sanitizeDiagnosis = (value: unknown): DiagnosisSubmission | null => {
   if (!isRecord(value)) return null;
   const selectedErrorType = value.selectedErrorType;
@@ -136,7 +129,6 @@ const sanitizeDiagnosis = (value: unknown): DiagnosisSubmission | null => {
       : { selectedMissingDirection: value.selectedMissingDirection }),
   };
 };
-
 const sanitizeFace = (value: unknown): RecordValue | null => {
   const turn = isRecord(value) ? value.decorationQuarterTurn : undefined;
   if (!isRecord(value) || !isFaceId(value.id) || !integerPoint(value.grid)
@@ -151,7 +143,6 @@ const sanitizeFace = (value: unknown): RecordValue | null => {
     decorationQuarterTurn: turn,
   };
 };
-
 const sanitizeRepair = (value: unknown): RepairSubmission | null => {
   if (!isRecord(value) || !isFaceId(value.faceId) || !integerPoint(value.target)) return null;
   if (typeof value.accepted !== 'boolean') return null;
@@ -173,7 +164,6 @@ const sanitizeRepair = (value: unknown): RepairSubmission | null => {
   }
   return repair;
 };
-
 const sanitizePersistedEvidence = (value: unknown): PersistedEvidenceSubmission | null => {
   if (!isRecord(value) || !Array.isArray(value.selectedTerms) || value.selectedTerms.length === 0
     || !value.selectedTerms.every(isGeometryTerm)
@@ -192,7 +182,6 @@ const sanitizePersistedEvidence = (value: unknown): PersistedEvidenceSubmission 
     selectedTerms: [...value.selectedTerms],
   };
 };
-
 const sanitizePersistedAttempts = (
   value: unknown,
   mission: MissionDefinition | null,
@@ -213,7 +202,6 @@ const sanitizePersistedAttempts = (
     evidence: evidence as PersistedEvidenceSubmission[],
   };
 };
-
 const predictionMatchesMission = (
   prediction: PredictionRecord,
   mission: MissionDefinition,
@@ -306,7 +294,7 @@ const isReachableProgress = (
       && attemptsAreEmpty(attempts);
   }
   if (prediction === null
-    || attempts.predictions.length === 0
+    || attempts.predictions.length !== 1
     || !structurallyEqual(prediction, attempts.predictions[attempts.predictions.length - 1])
     || !matchesLastAttempt(diagnosis, attempts.diagnoses)
     || !matchesLastAttempt(repair, attempts.repairs)
@@ -487,10 +475,22 @@ export const createSessionProgressStore = (storage: Storage): ProgressStore => (
   clear: () => { storage.removeItem(PROGRESS_STORAGE_KEY); },
 });
 
-/** Writes only after explicit opt-in; clearing is an explicit operation. */
+/** Syncs storage at a state edge; false-to-false and null-to-false are no-ops. */
+export const syncLearningPersistence = (
+  previousState: LearningState | null,
+  nextState: LearningState,
+  store: ProgressStore,
+): void => {
+  if (previousState?.storageOptIn === true && nextState.storageOptIn === false) {
+    store.clear();
+    return;
+  }
+  if (nextState.storageOptIn === true) store.save(toPersistedProgress(nextState));
+};
+
+/** Legacy one-state wrapper; use syncLearningPersistence when detecting opt-out edges. */
 export const persistLearningState = (state: LearningState, store: ProgressStore): void => {
-  if (!state.storageOptIn) return;
-  store.save(toPersistedProgress(state));
+  syncLearningPersistence(null, state, store);
 };
 
 /** Generic alias for the controller layer's persistence effect. */
