@@ -164,6 +164,12 @@ export interface EvidenceSubmission {
   readonly completedSentence: string;
 }
 
+/** Evidence keeps the exact diagnosis/repair attempts that supplied its context. */
+export interface EvidenceAttempt extends EvidenceSubmission {
+  readonly diagnosisAttemptIndex?: number;
+  readonly repairAttemptIndex?: number;
+}
+
 export type AchievementStatus = 'confirmed' | 'practicing';
 
 export interface AchievementEvidence {
@@ -184,13 +190,15 @@ export interface LearningAttempts {
   readonly predictions: readonly PredictionAttempt[];
   readonly diagnoses: readonly DiagnosisSubmission[];
   readonly repairs: readonly RepairSubmission[];
-  readonly evidence: readonly EvidenceSubmission[];
+  readonly evidence: readonly EvidenceAttempt[];
 }
 
 /** 저장 시에는 학습 문장을 재생성할 수 있으므로 원문을 보관하지 않습니다. */
 export interface PersistedEvidenceSubmission {
   readonly oppositePair?: OppositePair;
   readonly selectedTerms: readonly GeometryTerm[];
+  readonly diagnosisAttemptIndex?: number;
+  readonly repairAttemptIndex?: number;
 }
 
 /** `LearningAttempts`에서 문장 원문을 제거한 저장 전용 구조입니다. */
@@ -277,8 +285,8 @@ export interface PersistedProgress {
 
 export interface ProgressStore {
   load(): PersistedProgress | null;
-  save(progress: PersistedProgress): void;
-  clear(): void;
+  save(progress: PersistedProgress): boolean | void;
+  clear(): boolean | void;
 }
 
 export type {

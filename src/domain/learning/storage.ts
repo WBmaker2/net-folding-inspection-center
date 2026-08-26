@@ -11,6 +11,7 @@ import { getMissionById } from '../../content/missions/catalog';
 import { sanitizePersistedProgress } from './storageValidation';
 import { evaluateEvidenceSubmission, expectedEvidenceSentence } from './evidence';
 import { createInitialLearningState } from './reducer';
+import { freezeRestoredState } from './storageRehydrate';
 
 export { sanitizePersistedProgress } from './storageValidation';
 
@@ -26,12 +27,15 @@ const cloneProgress = (progress: PersistedProgress): PersistedProgress => {
 
 const toPersistedEvidence = (
   evidence: EvidenceSubmission | null,
+  attempt?: LearningAttempts['evidence'][number],
 ): PersistedEvidenceSubmission | null => (
   evidence === null ? null : {
     ...(evidence.oppositePair === undefined ? {} : {
       oppositePair: { ...evidence.oppositePair },
     }),
     selectedTerms: [...evidence.selectedTerms],
+    ...(attempt?.diagnosisAttemptIndex === undefined ? {} : { diagnosisAttemptIndex: attempt.diagnosisAttemptIndex }),
+    ...(attempt?.repairAttemptIndex === undefined ? {} : { repairAttemptIndex: attempt.repairAttemptIndex }),
   }
 );
 
@@ -40,7 +44,7 @@ const toPersistedAttempts = (attempts: LearningAttempts): PersistedLearningAttem
   diagnoses: [...attempts.diagnoses],
   repairs: [...attempts.repairs],
   evidence: attempts.evidence
-    .map((evidence) => toPersistedEvidence(evidence))
+    .map((evidence) => toPersistedEvidence(evidence, evidence))
     .filter((evidence): evidence is PersistedEvidenceSubmission => evidence !== null),
 });
 
@@ -52,7 +56,7 @@ export const toPersistedProgress = (state: LearningState): PersistedProgress => 
   foldStepIndex: state.foldStepIndex,
   diagnosis: state.diagnosis,
   repair: state.repair,
-  evidence: toPersistedEvidence(state.evidence),
+  evidence: toPersistedEvidence(state.evidence, state.attempts.evidence.at(-1)),
   attempts: toPersistedAttempts(state.attempts),
   completedMissionIds: [...state.completedMissionIds],
 });
@@ -98,9 +102,22 @@ export const createSessionProgressStore = (storage: Storage): ProgressStore => (
   },
   save: (progress) => {
     const payload = cloneProgress(progress);
-    storage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(payload));
+    try {
+      storage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(payload));
+      return true;
+    } catch {
+      try { storage.removeItem(PROGRESS_STORAGE_KEY); } catch { /* unavailable storage */ }
+      return false;
+    }
   },
-  clear: () => { storage.removeItem(PROGRESS_STORAGE_KEY); },
+  clear: () => {
+    try {
+      storage.removeItem(PROGRESS_STORAGE_KEY);
+      return true;
+    } catch {
+      return false;
+    }
+  },
 });
 
 /** Returns the browser tab store when available, with an in-memory fallback. */
@@ -109,55 +126,50 @@ export const createDefaultProgressStore = (): ProgressStore => {
     return createMemoryProgressStore();
   }
   try {
-    return createSessionProgressStore(window.sessionStorage);
+    const sessionStore = createSessionProgressStore(window.sessionStorage);
+    // A read probe does not write or remove anything, but detects blocked storage.
+    window.sessionStorage.getItem(PROGRESS_STORAGE_KEY);
+    const memoryStore = createMemoryProgressStore();
+    let useMemory = false;
+    return {
+      load: () => {
+        if (useMemory) return memoryStore.load();
+        try {
+          return sessionStore.load();
+        } catch {
+          useMemory = true;
+          return memoryStore.load();
+        }
+      },
+      save: (progress) => {
+        if (useMemory) return memoryStore.save(progress);
+        const saved = sessionStore.save(progress);
+        if (saved === false) {
+          useMemory = true;
+          memoryStore.save(progress);
+        }
+        return saved;
+      },
+      clear: () => {
+        if (useMemory) return memoryStore.clear();
+        const cleared = sessionStore.clear();
+        if (cleared === false) {
+          useMemory = true;
+          memoryStore.clear();
+        }
+        return cleared;
+      },
+    };
   } catch {
     return createMemoryProgressStore();
   }
 };
 
-const freezeArray = <T>(items: readonly T[]): readonly T[] => Object.freeze([...items]);
-const freezeState = (state: LearningState): LearningState => Object.freeze({
-  ...state,
-  prediction: state.prediction === null ? null : Object.freeze({
-    ...state.prediction,
-    foldOrder: freezeArray(state.prediction.foldOrder),
-    arrowByFace: Object.freeze({ ...state.prediction.arrowByFace }),
-  }),
-  diagnosis: state.diagnosis === null ? null : Object.freeze({
-    ...state.diagnosis,
-    selectedFaceIds: freezeArray(state.diagnosis.selectedFaceIds),
-  }),
-  repair: state.repair === null ? null : Object.freeze({
-    ...state.repair,
-    target: Object.freeze({ ...state.repair.target }),
-    candidate: Object.freeze({
-      faces: freezeArray(state.repair.candidate.faces.map((face) => Object.freeze({
-        ...face,
-        grid: Object.freeze({ ...face.grid }),
-      }))),
-    }),
-  }),
-  evidence: state.evidence === null ? null : Object.freeze({
-    ...state.evidence,
-    ...(state.evidence.oppositePair === undefined ? {} : {
-      oppositePair: Object.freeze({ ...state.evidence.oppositePair }),
-    }),
-    selectedTerms: freezeArray(state.evidence.selectedTerms),
-  }),
-  attempts: Object.freeze({
-    predictions: freezeArray(state.attempts.predictions),
-    diagnoses: freezeArray(state.attempts.diagnoses),
-    repairs: freezeArray(state.attempts.repairs),
-    evidence: freezeArray(state.attempts.evidence),
-  }),
-  completedMissionIds: freezeArray(state.completedMissionIds),
-});
-
 const restoreEvidence = (
   progress: PersistedProgress,
   persisted: PersistedEvidenceSubmission,
-  diagnosis: LearningState['diagnosis'],
-  repair: LearningState['repair'],
+  diagnosis?: LearningState['diagnosis'],
+  repair?: LearningState['repair'],
 ): EvidenceSubmission | null => {
   if (progress.missionId === null || progress.prediction === null) return null;
   const mission = getMissionById(progress.missionId);
@@ -180,6 +192,21 @@ const restoreEvidence = (
   };
 };
 
+const evidenceContextFor = (
+  progress: PersistedProgress,
+  evidence: PersistedEvidenceSubmission,
+): { readonly diagnosis: LearningState['diagnosis']; readonly repair: LearningState['repair'] } | null => {
+  const diagnosis = evidence.diagnosisAttemptIndex === undefined
+    ? null
+    : progress.attempts.diagnoses[evidence.diagnosisAttemptIndex] ?? null;
+  const repair = evidence.repairAttemptIndex === undefined
+    ? null
+    : progress.attempts.repairs[evidence.repairAttemptIndex] ?? null;
+  if (evidence.diagnosisAttemptIndex !== undefined && diagnosis === null) return null;
+  if (evidence.repairAttemptIndex !== undefined && repair === null) return null;
+  return { diagnosis, repair };
+};
+
 /** Rehydrates a validated payload into an immutable LearningState. */
 export const rehydratePersistedProgress = (progress: PersistedProgress): LearningState | null => {
   const base = createInitialLearningState();
@@ -194,23 +221,19 @@ export const rehydratePersistedProgress = (progress: PersistedProgress): Learnin
       faces: progress.repair.candidate.faces.map((face) => ({ ...face, grid: { ...face.grid } })),
     },
   };
-  // Return-to-fold records intentionally clear the current review fields while
-  // retaining attempts. Use the latest structured attempt only to regenerate
-  // historical sentences; never restore it as the active review state.
-  const sentenceDiagnosis = diagnosis ?? progress.attempts.diagnoses.at(-1) ?? null;
-  const sentenceRepair = repair ?? progress.attempts.repairs.at(-1) ?? null;
   const evidence = progress.evidence === null
     ? null
-    : restoreEvidence(progress, progress.evidence, sentenceDiagnosis, sentenceRepair);
+    : (() => {
+      const context = evidenceContextFor(progress, progress.evidence);
+      return context === null ? null : restoreEvidence(progress, progress.evidence, context.diagnosis, context.repair);
+    })();
   if (progress.evidence !== null && evidence === null) return null;
-  const attemptsEvidence = progress.attempts.evidence.map((item) => restoreEvidence(
-    progress,
-    item,
-    sentenceDiagnosis,
-    sentenceRepair,
-  ));
+  const attemptsEvidence = progress.attempts.evidence.map((item) => {
+    const context = evidenceContextFor(progress, item);
+    return context === null ? null : restoreEvidence(progress, item, context.diagnosis, context.repair);
+  });
   if (attemptsEvidence.some((item) => item === null)) return null;
-  return freezeState({
+  return freezeRestoredState({
     ...base,
     missionId: progress.missionId,
     stage: progress.stage,
@@ -248,16 +271,37 @@ export const rehydratePersistedProgress = (progress: PersistedProgress): Learnin
 };
 
 /** Syncs storage at a state edge; false-to-false and null-to-false are no-ops. */
+export interface PersistenceSyncResult {
+  readonly ok: boolean;
+  readonly operation: 'save' | 'clear';
+}
+
 export const syncLearningPersistence = (
   previousState: LearningState | null,
   nextState: LearningState,
   store: ProgressStore,
-): void => {
+): PersistenceSyncResult | null => {
+  if (previousState === nextState) return null;
   if (previousState?.storageOptIn === true && nextState.storageOptIn === false) {
-    store.clear();
-    return;
+    try {
+      return { ok: store.clear() !== false, operation: 'clear' };
+    } catch {
+      return { ok: false, operation: 'clear' };
+    }
   }
-  if (nextState.storageOptIn === true) store.save(toPersistedProgress(nextState));
+  if (nextState.storageOptIn === true) {
+    try {
+      const ok = store.save(toPersistedProgress(nextState)) !== false;
+      if (!ok) {
+        try { store.clear(); } catch { /* best-effort targeted cleanup */ }
+      }
+      return { ok, operation: 'save' };
+    } catch {
+      try { store.clear(); } catch { /* best-effort targeted cleanup */ }
+      return { ok: false, operation: 'save' };
+    }
+  }
+  return null;
 };
 
 /** Legacy one-state wrapper; use syncLearningPersistence when detecting opt-out edges. */

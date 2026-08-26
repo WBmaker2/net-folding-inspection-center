@@ -5,6 +5,7 @@ import {
 } from './repair';
 import type { RepairSubmission } from './types';
 import type { FaceId, GridPoint, NetDefinition } from '../net/types';
+import { isIsoInstant } from './timestamps';
 
 const FACE_IDS: readonly FaceId[] = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6'];
 const isFaceId = (value: unknown): value is FaceId => FACE_IDS.includes(value as FaceId);
@@ -42,6 +43,9 @@ export const verifyRepairSubmission = (
     throw new RepairValidationError('A repair must include a candidate net and an acceptance flag');
   }
   const submission = value as RepairSubmission;
+  if (submission.submittedAtIso !== undefined && !isIsoInstant(submission.submittedAtIso)) {
+    throw new RepairValidationError('The repair timestamp is invalid');
+  }
   const candidate = canonicalizeNet(submission.candidate)!;
   const normalizedSubmission: RepairSubmission = { ...submission, candidate };
   const evaluation = evaluateRepair(original, candidate, baseFaceId);

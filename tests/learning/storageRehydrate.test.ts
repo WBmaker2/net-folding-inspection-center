@@ -66,5 +66,24 @@ describe('persisted state rehydration', () => {
     expect(restoredReturned).toMatchObject({ stage: 'folding', foldStepIndex: 2, diagnosis: null, repair: null });
     expect(restoredReturned?.attempts.evidence[0]?.completedSentence)
       .toBe(evidenced.attempts.evidence[0]?.completedSentence);
+    expect(Object.isFrozen(restoredReturned?.attempts.evidence[0])).toBe(true);
+    expect(Object.isFrozen(restoredReturned?.attempts.evidence[0]?.selectedTerms)).toBe(true);
+    expect(Object.isFrozen(restoredReturned?.attempts.repairs[0])).toBe(true);
+    expect(Object.isFrozen(restoredReturned?.attempts.repairs[0]?.target)).toBe(true);
+    expect(Object.isFrozen(restoredReturned?.attempts.repairs[0]?.candidate)).toBe(true);
+    expect(Object.isFrozen(restoredReturned?.attempts.repairs[0]?.candidate.faces)).toBe(true);
+    expect(Object.isFrozen(restoredReturned?.attempts.repairs[0]?.candidate.faces[0]?.grid)).toBe(true);
+    expect(() => {
+      (restoredReturned!.attempts.repairs[0]!.target as { x: number }).x = 99;
+    }).toThrow();
+    expect(restoredReturned?.attempts.repairs[0]?.target.x).toBe(2);
+
+    const wrongAfterReturn = learningReducer(
+      learningReducer(returned, { type: 'SET_FOLD_STEP', stepIndex: 5 }),
+      { type: 'SUBMIT_DIAGNOSIS', diagnosis: { selectedErrorType: 'overlap', selectedFaceIds: ['F1'] } },
+    );
+    const restoredHistory = rehydratePersistedProgress(toPersistedProgress(wrongAfterReturn));
+    expect(restoredHistory?.attempts.evidence[0]?.completedSentence)
+      .toBe(evidenced.attempts.evidence[0]?.completedSentence);
   });
 });

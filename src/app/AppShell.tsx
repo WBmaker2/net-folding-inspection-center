@@ -7,6 +7,7 @@ interface AppShellProps {
   readonly storageOptIn: boolean;
   readonly onStorageOptInChange: (enabled: boolean) => void;
   readonly restoredFromStore?: boolean;
+  readonly persistenceNotice?: string | null;
 }
 
 export function AppShell({
@@ -14,6 +15,7 @@ export function AppShell({
   storageOptIn,
   onStorageOptInChange,
   restoredFromStore = false,
+  persistenceNotice = null,
 }: AppShellProps): React.JSX.Element {
   const [historyOpen, setHistoryOpen] = useState(false);
   return (
@@ -48,6 +50,9 @@ export function AppShell({
               저장한 진행을 불러왔습니다.
             </p>
           ) : null}
+          {persistenceNotice === null ? null : (
+            <p className="restore-notice" role="status" aria-live="polite">{persistenceNotice}</p>
+          )}
           <button
             type="button"
             className="update-history-trigger"

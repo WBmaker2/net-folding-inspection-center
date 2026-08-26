@@ -16,6 +16,8 @@ import type {
   PredictionRecord,
   RepairSubmission,
 } from './types';
+import { isIsoInstant } from './timestamps';
+import { evidenceAttemptsAreValid } from './storageEvidenceValidation';
 
 const MISSION_IDS: readonly MissionId[] = [
   'cube-track-01', 'cube-track-02',
@@ -113,8 +115,7 @@ const sanitizePrediction = (
   if (value.foldOrder.length !== movingFaceIds.length
     || !value.foldOrder.every(isFaceId) || !uniqueFaces(value.foldOrder)
     || !value.foldOrder.every((faceId) => movingFaceIds.includes(faceId))
-    || typeof value.submittedAtIso !== 'string'
-    || value.submittedAtIso.trim().length === 0) return null;
+    || !isIsoInstant(value.submittedAtIso)) return null;
   const arrowByFace = sanitizeArrowByFace(value.arrowByFace, mission, value.baseFaceId);
   if (arrowByFace === null) return null;
   return {
@@ -164,7 +165,7 @@ const sanitizeFace = (value: unknown): RecordValue | null => {
 const sanitizeRepair = (value: unknown): RepairSubmission | null => {
   if (!isRecord(value) || !isFaceId(value.faceId) || !integerPoint(value.target)) return null;
   if (typeof value.accepted !== 'boolean') return null;
-  if (value.submittedAtIso !== undefined && typeof value.submittedAtIso !== 'string') return null;
+  if (value.submittedAtIso !== undefined && !isIsoInstant(value.submittedAtIso)) return null;
   if (!isRecord(value.candidate) || !Array.isArray(value.candidate.faces)) return null;
   const faces = value.candidate.faces.map(sanitizeFace);
   if (faces.some((face) => face === null) || faces.length !== 6) return null;
@@ -186,6 +187,10 @@ const sanitizePersistedEvidence = (value: unknown): PersistedEvidenceSubmission 
   if (value.oppositePair !== undefined
     && (!isRecord(value.oppositePair) || !isFaceId(value.oppositePair.a)
       || !isFaceId(value.oppositePair.b) || value.oppositePair.a === value.oppositePair.b)) return null;
+  const validAttemptIndex = (index: unknown): boolean => index === undefined
+    || (typeof index === 'number' && Number.isInteger(index) && index >= 0);
+  if (!validAttemptIndex(value.diagnosisAttemptIndex)
+    || !validAttemptIndex(value.repairAttemptIndex)) return null;
   const oppositePair = value.oppositePair;
   return {
     ...(oppositePair === undefined ? {} : {
@@ -195,6 +200,8 @@ const sanitizePersistedEvidence = (value: unknown): PersistedEvidenceSubmission 
       },
     }),
     selectedTerms: [...value.selectedTerms],
+    ...(value.diagnosisAttemptIndex === undefined ? {} : { diagnosisAttemptIndex: value.diagnosisAttemptIndex as number }),
+    ...(value.repairAttemptIndex === undefined ? {} : { repairAttemptIndex: value.repairAttemptIndex as number }),
   };
 };
 
@@ -330,27 +337,7 @@ const isReachableProgress = (
   if (attempts.repairs.some((repair) => !repairMatchesMission(mission, repair, prediction.baseFaceId))) {
     return false;
   }
-  const evidenceAttemptsAreStructured = attempts.evidence.every((persistedEvidence) => {
-    const evidence = {
-      ...(persistedEvidence.oppositePair === undefined ? {} : {
-        oppositePair: persistedEvidence.oppositePair,
-      }),
-      selectedTerms: persistedEvidence.selectedTerms,
-      completedSentence: '',
-    };
-    const contextInput = {
-      baseFaceId: prediction.baseFaceId,
-      diagnosis,
-      repair,
-    };
-    const evaluation = evaluateEvidenceSubmission(mission, evidence, contextInput);
-    const generated = expectedEvidenceSentence(mission, evidence, evaluation.context);
-    const termsAreStructured = persistedEvidence.selectedTerms.length === 2
-      && new Set(persistedEvidence.selectedTerms).size === 2
-      && persistedEvidence.selectedTerms.every((term) => mission.targetVocabulary.includes(term));
-    return generated !== null && termsAreStructured && evaluation.pairMatches;
-  });
-  if (!evidenceAttemptsAreStructured) return false;
+  if (!evidenceAttemptsAreValid(mission, prediction, attempts)) return false;
   if (stage === 'folding') {
     return foldStepIndex >= 0 && foldStepIndex < 5
       && hasNoReviewData(diagnosis, repair, evidence);

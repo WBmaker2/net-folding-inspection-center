@@ -12,6 +12,18 @@ const BANNED_PATTERNS = [
 
 const sourceRoot = (root) => path.resolve(root, 'src');
 
+const assertDirectory = async (directory, label) => {
+  let stats;
+  try {
+    stats = await fs.stat(directory);
+  } catch {
+    throw new Error(`Offline boundary check requires ${label} directory: ${directory}`);
+  }
+  if (!stats.isDirectory()) {
+    throw new Error(`Offline boundary check requires ${label} directory: ${directory}`);
+  }
+};
+
 async function collectTextFiles(directory, root, files = []) {
   let entries;
   try {
@@ -35,6 +47,8 @@ async function collectTextFiles(directory, root, files = []) {
 
 export async function scanOfflineBoundary(root = process.cwd()) {
   const resolvedRoot = path.resolve(root);
+  await assertDirectory(resolvedRoot, 'repo root');
+  await assertDirectory(sourceRoot(resolvedRoot), 'src');
   const files = await collectTextFiles(sourceRoot(resolvedRoot), resolvedRoot);
   const findings = [];
   for (const file of files.sort((left, right) => left.relative.localeCompare(right.relative))) {
@@ -59,7 +73,13 @@ export async function scanOfflineBoundary(root = process.cwd()) {
 }
 
 export async function main() {
-  const findings = await scanOfflineBoundary();
+  let findings;
+  try {
+    findings = await scanOfflineBoundary();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : String(error));
+    return 1;
+  }
   if (findings.length > 0) {
     for (const finding of findings) {
       console.error(`${finding.path}:${finding.line} ${finding.token}`);

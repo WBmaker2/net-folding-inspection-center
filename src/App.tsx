@@ -154,6 +154,7 @@ export function App(): React.JSX.Element {
     <AppShell
       storageOptIn={state.storageOptIn}
       restoredFromStore={controller.restoredFromStore}
+      persistenceNotice={controller.persistenceNotice}
       onStorageOptInChange={(enabled) => controller.dispatch({
         type: 'SET_STORAGE_OPT_IN',
         enabled,

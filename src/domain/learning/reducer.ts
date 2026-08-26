@@ -15,8 +15,10 @@ import type {
   PredictionRecord,
   DiagnosisSubmission,
   EvidenceSubmission,
+  EvidenceAttempt,
   RepairSubmission,
 } from './types';
+import { isIsoInstant } from './timestamps';
 const FOLD_STEP_COUNT = 5;
 const FOLD_DIRECTIONS = ['north', 'east', 'south', 'west'] as const;
 const AXIS_DIRECTIONS: readonly AxisDirection[] = ['+x', '-x', '+y', '-y', '+z', '-z'];
@@ -228,7 +230,7 @@ const validatePrediction = (
   if (movingFaceIds.some((faceId) => !isFoldDirection(value.arrowByFace[faceId]))) {
     throw transitionError(state, action, 'The prediction fold directions are invalid');
   }
-  if (typeof value.submittedAtIso !== 'string' || value.submittedAtIso.trim().length === 0) {
+  if (!isIsoInstant(value.submittedAtIso)) {
     throw transitionError(state, action, 'The prediction timestamp is required');
   }
   return clonePrediction(value, mission);
@@ -269,10 +271,17 @@ const appendRepair = (state: LearningState, repair: RepairSubmission): LearningA
   repairs: freezeArray([...state.attempts.repairs, repair]),
 });
 
-const appendEvidence = (state: LearningState, evidence: EvidenceSubmission): LearningAttempts => ({
-  ...state.attempts,
-  evidence: freezeArray([...state.attempts.evidence, evidence]),
-});
+const appendEvidence = (state: LearningState, evidence: EvidenceSubmission): LearningAttempts => {
+  const attempt: EvidenceAttempt = Object.freeze({
+    ...evidence,
+    ...(state.diagnosis === null ? {} : { diagnosisAttemptIndex: state.attempts.diagnoses.length - 1 }),
+    ...(state.repair === null ? {} : { repairAttemptIndex: state.attempts.repairs.length - 1 }),
+  });
+  return {
+    ...state.attempts,
+    evidence: freezeArray([...state.attempts.evidence, attempt]),
+  };
+};
 
 const diagnosisIsCorrect = (
   mission: MissionDefinition,

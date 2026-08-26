@@ -232,7 +232,7 @@ describe('progress storage', () => {
     syncLearningPersistence(previous, optedIn, store);
     expect(setItem).toHaveBeenCalledTimes(1);
     syncLearningPersistence(optedIn, optedIn, store);
-    expect(setItem).toHaveBeenCalledTimes(2);
+    expect(setItem).toHaveBeenCalledTimes(1);
     syncLearningPersistence(optedIn, optedOut, store);
     expect(removeItem).toHaveBeenCalledTimes(1);
     expect(storage.getItem(PROGRESS_STORAGE_KEY)).toBeNull();
