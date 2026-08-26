@@ -16,6 +16,8 @@ export interface RepairScreenProps {
   readonly originalNet?: NetDefinition;
   readonly onSubmit: (repair: RepairSubmission) => void;
   readonly onRotateDecoration?: (faceId: FaceId, net: NetDefinition) => void;
+  /** Standalone Task 11 keeps this capability; integrated flow can hide it. */
+  readonly showDecorationRotation?: boolean;
   readonly now?: () => string;
 }
 
@@ -42,6 +44,7 @@ function RepairScreenContent({
   repairNet,
   onSubmit,
   onRotateDecoration,
+  showDecorationRotation = true,
   now = () => new Date().toISOString(),
 }: RepairScreenContentProps): React.JSX.Element {
   const headingRef = useFocusHeading<HTMLHeadingElement>();
@@ -170,7 +173,7 @@ function RepairScreenContent({
         )}
       </div>
 
-      {selectedFaceId !== null && (
+      {showDecorationRotation && selectedFaceId !== null && (
         <button type="button" className="repair-rotate-button" onClick={rotate}>
           {faceNumber(repairNet.faces.find((face) => face.id === selectedFaceId)!)}번 장식만 한 번 돌리기
         </button>

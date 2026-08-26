@@ -12,12 +12,8 @@ describe('AppShell', () => {
   it('shows the Korean inspection center introduction', () => {
     render(<App />);
 
-    expect(
-      screen.getByRole('heading', {
-        name: '전개도 포장 검수소',
-        level: 1,
-      }),
-    ).toBeVisible();
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
+    expect(screen.getByRole('heading', { name: '검수 접수', level: 1 })).toBeVisible();
     expect(screen.getByText('예측한 뒤 한 면씩 접어 보세요.')).toBeVisible();
   });
 

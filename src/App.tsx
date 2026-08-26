@@ -98,6 +98,7 @@ export function App(): React.JSX.Element {
         <RepairScreen
           mission={mission}
           baseFaceId={state.prediction.baseFaceId}
+          showDecorationRotation={false}
           onSubmit={(repair) => controller.dispatch({
             type: 'SUBMIT_REPAIR',
             repair,
