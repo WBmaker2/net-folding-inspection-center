@@ -76,6 +76,44 @@ const isFrameShape = (value: unknown): value is FaceFrame => {
     && isVec3Shape(frame.down) && isVec3Shape(frame.center);
 };
 
+type FrameEntry = readonly [FaceId, FaceFrame];
+
+/** Materializes a map-like value with a hard bound against forged iterators. */
+const materializeFrames = (value: unknown): readonly FrameEntry[] | null => {
+  try {
+    if (typeof value !== 'object' || value === null) return null;
+    const map = value as {
+      readonly size?: unknown;
+      readonly entries?: unknown;
+      readonly get?: unknown;
+    };
+    const size = map.size;
+    if (typeof size !== 'number' || !Number.isSafeInteger(size) || size < 0 || size > FACE_IDS.length
+      || typeof map.entries !== 'function' || typeof map.get !== 'function') return null;
+    const iterator = (map.entries as () => unknown).call(map);
+    if (typeof iterator !== 'object' || iterator === null
+      || typeof (iterator as { next?: unknown }).next !== 'function') return null;
+
+    const entries: FrameEntry[] = [];
+    for (let index = 0; index <= FACE_IDS.length; index += 1) {
+      const next = (iterator as { next: () => unknown }).next();
+      if (typeof next !== 'object' || next === null) return null;
+      const step = next as { done?: unknown; value?: unknown };
+      if (step.done === true) break;
+      if (step.done !== false || entries.length >= FACE_IDS.length) return null;
+      const entry = step.value;
+      if (!Array.isArray(entry) || entry.length !== 2
+        || !isFaceId(entry[0]) || !isFrameShape(entry[1])) return null;
+      if (entries.some(([faceId]) => faceId === entry[0])) return null;
+      entries.push([entry[0], entry[1]]);
+      if (entries.length > size) return null;
+    }
+    return entries.length === size ? entries : null;
+  } catch {
+    return null;
+  }
+};
+
 /** Optional UI data must not override an independently recomputed result. */
 export const validationMatches = (
   provided: unknown,
@@ -83,6 +121,10 @@ export const validationMatches = (
 ): boolean => {
   if (!isValidationShape(provided) || !isValidationShape(expected)) return false;
   try {
+    const providedFrames = materializeFrames(provided.frames);
+    const expectedFrames = materializeFrames(expected.frames);
+    if (providedFrames === null || expectedFrames === null
+      || providedFrames.length !== expectedFrames.length) return false;
     if (provided.isValid !== expected.isValid || provided.reason !== expected.reason
       || provided.missingNormals.length !== expected.missingNormals.length
       || provided.missingNormals.some((direction, index) => direction !== expected.missingNormals[index])
@@ -100,12 +142,17 @@ export const validationMatches = (
         return expectedPair === undefined || pair.a !== expectedPair.a || pair.b !== expectedPair.b;
       })) return false;
 
-    const expectedEntries = [...expected.frames.entries()];
-    return provided.frames.size === expected.frames.size
-      && expectedEntries.every(([faceId, frame]) => {
-        const providedFrame = provided.frames.get(faceId);
-        return providedFrame !== undefined && sameFrame(providedFrame, frame);
-      });
+    const expectedKeys = new Set(expectedFrames.map(([faceId]) => faceId));
+    const providedKeys = new Set(providedFrames.map(([faceId]) => faceId));
+    if (providedKeys.size !== expectedKeys.size
+      || providedFrames.some(([faceId]) => !expectedKeys.has(faceId))) return false;
+    return expectedFrames.every(([faceId, frame]) => {
+      const providedEntry = providedFrames.find(([candidate]) => candidate === faceId);
+      if (providedEntry === undefined || !sameFrame(providedEntry[1], frame)) return false;
+      const providedFrame = provided.frames.get(faceId);
+      return providedFrame !== undefined && isFrameShape(providedFrame)
+        && sameFrame(providedFrame, providedEntry[1]);
+    });
   } catch {
     return false;
   }
@@ -128,8 +175,7 @@ export const isValidationShape = (value: unknown): value is CubeValidationResult
       && typeof candidate.frames.size === 'number'
       && Number.isSafeInteger(candidate.frames.size)
       && typeof candidate.frames.get === 'function'
-      && typeof candidate.frames.entries === 'function'
-      && [...candidate.frames.entries()].every(([faceId, frame]) => isFaceId(faceId) && isFrameShape(frame));
+      && typeof candidate.frames.entries === 'function';
   } catch {
     return false;
   }
