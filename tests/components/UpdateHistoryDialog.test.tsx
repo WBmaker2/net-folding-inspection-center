@@ -24,17 +24,19 @@ describe('UpdateHistoryDialog', () => {
       { date: '2026-08-26', category: '설계', summary: '최초 설계 문서 작성' },
       { date: '2026-08-26', category: '개발', summary: '정육면체 미션 8개와 판정·2D 대체 흐름 구현' },
     ]);
-    expect(CHANGELOG).toHaveLength(4);
+    expect(CHANGELOG).toHaveLength(5);
     expect(CHANGELOG[2]).toEqual({ date: '2026-08-27', category: '접근성', summary: '핵심 단계 강조·모션 감소·업데이트 내역 접근성 개선' });
     expect(CHANGELOG[3]).toEqual({ date: '2026-08-27', category: '콘텐츠', summary: '선택형 진행 저장·교육 모형 한계·오프라인 경계 추가' });
+    expect(CHANGELOG[4]).toEqual({ date: '2026-08-27', category: '접근성', summary: '모바일·키보드·스크린 리더·2D 완료 흐름 검증' });
     const { unmount } = render(<UpdateHistoryDialog open onClose={vi.fn()} />);
     const dialog = screen.getByRole('dialog', { name: '업데이트 내역' });
-    expect(dialog.querySelectorAll('time')).toHaveLength(4);
+    expect(dialog.querySelectorAll('time')).toHaveLength(5);
     expect(dialog).toHaveTextContent('설계');
     expect(dialog).toHaveTextContent('개발');
     expect(dialog).toHaveTextContent('최초 설계 문서 작성');
     expect(dialog).toHaveTextContent('정육면체 미션 8개와 판정·2D 대체 흐름 구현');
     expect(dialog).toHaveTextContent('핵심 단계 강조·모션 감소·업데이트 내역 접근성 개선');
+    expect(dialog).toHaveTextContent('모바일·키보드·스크린 리더·2D 완료 흐름 검증');
     expect(dialog.querySelector('time')).toHaveAttribute('dateTime', '2026-08-26');
     unmount();
   });

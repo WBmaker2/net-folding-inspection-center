@@ -17,7 +17,13 @@ npm test -- --run
 npm run test:e2e
 npm run check:file-size
 npm run check:offline-boundary
+npm run verify
 ```
+
+Task 16의 자동 완료 게이트는 Chromium을 한 worker로 실행하여 macOS 로컬·CI 결과를
+재현합니다. 실제 VoiceOver와 Safari 확인은 자동화 결과를 대신하지 않으므로
+[`docs/qa/manual-accessibility-checklist.md`](docs/qa/manual-accessibility-checklist.md)의
+수동 기록을 함께 확인해 주세요.
 
 검수소는 로그인, 서버, 외부 AI, 사용자 파일 업로드 없이 브라우저에서 실행됩니다. 이름·학번·이메일·자유 입력을 받지 않고, 근거는 선택형 항목으로만 제출합니다. 학습 기록은 기본적으로 메모리에만 있으며 `이 탭에서 새로고침 후에도 진행 저장`을 직접 선택할 때만 이 탭의 `sessionStorage`에 저장됩니다. 저장을 해제하면 앱의 진행 키만 즉시 지우고, 탭을 닫으면 저장이 사라집니다. 저장 데이터에도 문장 원문이나 개인정보를 넣지 않습니다.
 진행 키 이름은 호환성을 위해 `nfic.progress.v1`로 유지하지만 현재 저장 payload는 명시적 `version: 2`입니다. 예전 v1 payload는 구조화된 근거 맥락을 확인한 뒤 한 번만 v2로 바꾸며, 확인할 수 없으면 불러오지 않습니다.

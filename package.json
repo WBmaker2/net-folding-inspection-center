@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "lint": "eslint .",
     "typecheck": "tsc -b --pretty false",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --workers=1",
     "check:file-size": "node scripts/check-file-size.mjs",
     "check:offline-boundary": "node scripts/check-offline-boundary.mjs",
     "verify": "npm run lint && npm run typecheck && npm test -- --run && npm run test:e2e && npm run check:file-size && npm run check:offline-boundary && npm run build"

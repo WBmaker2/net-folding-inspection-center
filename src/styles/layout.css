@@ -44,6 +44,11 @@
   padding: clamp(3rem, 10vw, 7rem) 1rem calc(clamp(3rem, 10vw, 7rem) + 5rem);
 }
 
+/* Grid items must be allowed to shrink around long tables at browser zoom. */
+.main-content > * {
+  min-width: 0;
+}
+
 .welcome-card {
   width: min(100%, 42rem);
   padding: clamp(2rem, 7vw, 4.5rem);
