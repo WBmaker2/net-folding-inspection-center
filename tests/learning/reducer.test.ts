@@ -14,6 +14,7 @@ import { getMissionById } from '../../src/content/missions/catalog';
 import { evaluateDiagnosis } from '../../src/domain/learning/diagnosis';
 import { validateCubeNet } from '../../src/domain/net/validateCubeNet';
 import { moveFace } from '../../src/domain/learning/repair';
+import { buildEvidenceSentence } from '../../src/domain/learning/evidence';
 import type {
   DiagnosisSubmission,
   EvidenceSubmission,
@@ -58,8 +59,10 @@ const repair: RepairSubmission = {
 };
 
 const evidence: EvidenceSubmission = {
-  selectedTerms: ['모서리', '겹침'],
-  completedSentence: '두 면은 같은 모서리에서 겹칩니다.',
+  selectedTerms: ['겹침', '면'],
+  completedSentence: buildEvidenceSentence(getMissionById('cube-collision-01'), {
+    firstFace: 'F2', secondFace: 'F6', term1: '면', term2: '겹침',
+  })!,
 };
 
 const selectedCollision = () => learningReducer(

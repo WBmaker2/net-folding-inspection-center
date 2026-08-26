@@ -13,6 +13,7 @@ import { createInitialLearningState, learningReducer } from '../../src/domain/le
 import { getMissionById } from '../../src/content/missions/catalog';
 import { validateCubeNet } from '../../src/domain/net/validateCubeNet';
 import { moveFace } from '../../src/domain/learning/repair';
+import { buildEvidenceSentence } from '../../src/domain/learning/evidence';
 import type { PersistedProgress } from '../../src/domain/learning/types';
 const prediction = {
   baseFaceId: 'F1' as const,
@@ -100,8 +101,10 @@ const collisionEvidenceState = () => learningReducer(
   {
     type: 'SUBMIT_EVIDENCE',
     evidence: {
-      selectedTerms: ['모서리', '겹침'],
-      completedSentence: '두 면은 같은 모서리에서 겹칩니다.',
+      selectedTerms: ['겹침', '면'],
+      completedSentence: buildEvidenceSentence(getMissionById('cube-collision-01'), {
+        firstFace: 'F2', secondFace: 'F6', term1: '면', term2: '겹침',
+      })!,
     },
   },
 );
@@ -458,22 +461,23 @@ describe('progress storage', () => {
   });
 
   it('strips the completed sentence from current and attempted evidence', () => {
-    const evidenced = learningReducer(collisionEvidenceState(), {
-      type: 'SUBMIT_EVIDENCE',
-      evidence: {
-        selectedTerms: ['면', '접는 방향'],
-        completedSentence: 'Ada 학생 ada@example.test의 문장 원문',
-      },
-    });
-
+    const evidenced = collisionEvidenceState();
     const persisted = toPersistedProgress(evidenced);
-    const serialized = JSON.stringify(persisted);
+    const injected = {
+      ...persisted,
+      evidence: { ...persisted.evidence!, completedSentence: 'Ada 학생 ada@example.test의 문장 원문' },
+      attempts: {
+        ...persisted.attempts,
+        evidence: persisted.attempts.evidence.map((item, index) => index === 0
+          ? { ...item, completedSentence: 'Ada 학생 ada@example.test의 문장 원문' }
+          : item),
+      },
+    };
+    const sanitized = sanitizePersistedProgress(injected)!;
+    const serialized = JSON.stringify(sanitized);
     expect(serialized).not.toMatch(/Ada|ada@example|원문|completedSentence/u);
-    expect(persisted.evidence).toEqual({ selectedTerms: ['면', '접는 방향'] });
-    expect(persisted.attempts.evidence).toEqual([
-      { selectedTerms: ['모서리', '겹침'] },
-      { selectedTerms: ['면', '접는 방향'] },
-    ]);
+    expect(sanitized.evidence).toEqual(persisted.evidence);
+    expect(sanitized.attempts.evidence).toEqual(persisted.attempts.evidence);
   });
 
   it('rewrites a valid payload immediately when unknown fields are present', () => {
