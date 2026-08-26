@@ -95,6 +95,53 @@ describe('EvidenceScreen', () => {
     expect(document.querySelectorAll('.gi-pulse')).toHaveLength(1);
   });
 
+  it('does not reset a submitted attempt at the last-option ArrowDown boundary', async () => {
+    const user = userEvent.setup();
+    const mission = getMissionById('cube-opposite-01');
+    render(<EvidenceScreen mission={mission} validation={validateCubeNet(mission.net, 'F1')} onSubmit={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: '1번 면' }));
+    await user.click(screen.getByRole('button', { name: '3번 면' }));
+    await user.selectOptions(screen.getByLabelText('첫 번째 기하 낱말'), '맞은편');
+    await user.selectOptions(screen.getByLabelText('두 번째 기하 낱말'), '접는 방향');
+    await user.click(screen.getByRole('button', { name: '근거 확인' }));
+    const path = screen.getByLabelText('두 번째 기하 낱말');
+    expect(path).toHaveValue('접는 방향');
+    expect(screen.getByRole('button', { name: '미션 완료 확인' })).toBeInTheDocument();
+    await user.click(path);
+    await user.keyboard('{ArrowDown}');
+    expect(path).toHaveValue('접는 방향');
+    expect(screen.getByText('근거 시도를 기록했습니다. 필요한 경우 선택을 고쳐 다시 확인할 수 있습니다.')).toBeVisible();
+    expect(screen.getByRole('button', { name: '미션 완료 확인' })).toBeInTheDocument();
+  });
+
+  it('keeps the placeholder at the first-option ArrowUp boundary', async () => {
+    const user = userEvent.setup();
+    const mission = getMissionById('cube-opposite-01');
+    render(<EvidenceScreen mission={mission} validation={validateCubeNet(mission.net, 'F1')} onSubmit={vi.fn()} />);
+    const relationship = screen.getByLabelText('첫 번째 기하 낱말');
+    await user.click(relationship);
+    await user.keyboard('{ArrowUp}');
+    expect(relationship).toHaveValue('');
+    expect(screen.queryByText('근거 시도를 기록했습니다. 필요한 경우 선택을 고쳐 다시 확인할 수 있습니다.')).not.toBeInTheDocument();
+  });
+
+  it('moves one option and resets a submitted attempt only after a changed value', async () => {
+    const user = userEvent.setup();
+    const mission = getMissionById('cube-opposite-01');
+    render(<EvidenceScreen mission={mission} validation={validateCubeNet(mission.net, 'F1')} onSubmit={vi.fn()} />);
+    await user.click(screen.getByRole('button', { name: '1번 면' }));
+    await user.click(screen.getByRole('button', { name: '3번 면' }));
+    await user.selectOptions(screen.getByLabelText('첫 번째 기하 낱말'), '맞은편');
+    await user.selectOptions(screen.getByLabelText('두 번째 기하 낱말'), '접는 방향');
+    await user.click(screen.getByRole('button', { name: '근거 확인' }));
+    const path = screen.getByLabelText('두 번째 기하 낱말');
+    await user.click(path);
+    await user.keyboard('{ArrowUp}');
+    expect(path).toHaveValue('면');
+    expect(screen.queryByText('근거 시도를 기록했습니다. 필요한 경우 선택을 고쳐 다시 확인할 수 있습니다.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '미션 완료 확인' })).not.toBeInTheDocument();
+  });
+
   it('uses the base face as repair-02 relation subject in preview', async () => {
     const user = userEvent.setup();
     const mission = getMissionById('cube-repair-02') as RepairMissionDefinition;

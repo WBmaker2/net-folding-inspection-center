@@ -2,7 +2,8 @@
 
 실행일: 2026-08-27 (KST)
 
-환경: macOS 26.5.2 (25F84), Apple arm64, Node v25.6.1, npm 11.9.0
+환경: macOS 26.5.2 (25F84), Apple arm64, Node v25.6.1, npm 11.9.0,
+Google Chrome for Testing 151.0.7922.34, Playwright 1.62.1
 
 자동화된 Chromium·axe 결과는 수동 보조기술 사용을 대신하지 않습니다.
 

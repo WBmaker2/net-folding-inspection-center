@@ -80,13 +80,15 @@ export function EvidenceScreen({
     current: GeometryTerm | '',
     setter: (term: GeometryTerm | '') => void,
   ): void => {
-    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
+      || (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')) return;
     event.preventDefault();
     const currentIndex = current === '' ? -1 : termOptions.indexOf(current);
     const nextIndex = Math.max(-1, Math.min(
       termOptions.length - 1,
       currentIndex + (event.key === 'ArrowDown' ? 1 : -1),
     ));
+    if (nextIndex === currentIndex) return;
     updateTerm(setter, nextIndex < 0 ? '' : termOptions[nextIndex]!);
   };
   const selectedPair = selectedFaces.length === 2

@@ -28,16 +28,57 @@ async function expectRequiredActionsUsable(
   expect(pulseBox?.height ?? 0).toBeGreaterThan(0);
   expect(pulseBox!.x + pulseBox!.width).toBeGreaterThan(0);
   expect(pulseBox!.x).toBeLessThan(viewport!.width);
+  expect(pulseBox!.y + pulseBox!.height).toBeGreaterThan(0);
+  expect(pulseBox!.y).toBeLessThan(viewport!.height);
   const pulseIsTopmost = await pulse.evaluate((element) => {
     const box = element.getBoundingClientRect();
     const top = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
     return top === element || element.contains(top);
   });
   expect(pulseIsTopmost).toBe(true);
+
+  const footer = page.locator('.site-footer');
+  await expect(dialog).toBeHidden();
+  await footer.scrollIntoViewIfNeeded();
   await trigger.scrollIntoViewIfNeeded();
   const triggerBox = await trigger.boundingBox();
   expect(triggerBox?.width ?? 0).toBeGreaterThan(0);
   expect(triggerBox?.height ?? 0).toBeGreaterThan(0);
+  expect(triggerBox!.x + triggerBox!.width).toBeGreaterThan(0);
+  expect(triggerBox!.x).toBeLessThan(viewport!.width);
+  expect(triggerBox!.y + triggerBox!.height).toBeGreaterThan(0);
+  expect(triggerBox!.y).toBeLessThan(viewport!.height);
+  const triggerIsTopmost = await trigger.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    const top = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    return top === element || element.contains(top);
+  });
+  expect(triggerIsTopmost).toBe(true);
+  const overlap = (left: { x: number; y: number; width: number; height: number }, right: { x: number; y: number; width: number; height: number }): boolean => (
+    left.x < right.x + right.width && left.x + left.width > right.x
+      && left.y < right.y + right.height && left.y + left.height > right.y
+  );
+  const footerGeometry = await page.evaluate(() => {
+    const rect = (selector: string): { x: number; y: number; width: number; height: number } | null => {
+      const element = document.querySelector(selector);
+      if (!(element instanceof HTMLElement)) return null;
+      const box = element.getBoundingClientRect();
+      return { x: box.x, y: box.y, width: box.width, height: box.height };
+    };
+    return {
+      trigger: rect('.update-history-trigger'),
+      storage: rect('.progress-storage-control'),
+      footerSentence: rect('.footer-content > p'),
+    };
+  });
+  expect(footerGeometry.storage).not.toBeNull();
+  expect(footerGeometry.footerSentence).not.toBeNull();
+  if (footerGeometry.trigger !== null && footerGeometry.storage !== null) {
+    expect(overlap(footerGeometry.trigger, footerGeometry.storage), JSON.stringify(footerGeometry)).toBe(false);
+  }
+  if (footerGeometry.trigger !== null && footerGeometry.footerSentence !== null) {
+    expect(overlap(footerGeometry.trigger, footerGeometry.footerSentence), JSON.stringify(footerGeometry)).toBe(false);
+  }
   await trigger.click();
   await expect(dialog).toBeVisible();
   const dialogBox = await dialog.boundingBox();
@@ -47,31 +88,12 @@ async function expectRequiredActionsUsable(
   expect(dialogBox!.y).toBeGreaterThanOrEqual(0);
   expect(dialogBox!.x + dialogBox!.width).toBeLessThanOrEqual(viewport!.width);
   expect(dialogBox!.y + dialogBox!.height).toBeLessThanOrEqual(viewport!.height);
-  const overlap = (left: { x: number; y: number; width: number; height: number }, right: { x: number; y: number; width: number; height: number }): boolean => (
-    left.x < right.x + right.width && left.x + left.width > right.x
-      && left.y < right.y + right.height && left.y + left.height > right.y
-  );
-  const geometry = await page.evaluate(() => {
-    const rect = (selector: string): { x: number; y: number; width: number; height: number } | null => {
-      const element = document.querySelector(selector);
-      if (!(element instanceof HTMLElement)) return null;
-      const box = element.getBoundingClientRect();
-      return { x: box.x, y: box.y, width: box.width, height: box.height };
-    };
-    return {
-      trigger: rect('.update-history-trigger'),
-      action: rect('button.gi-pulse'),
-      storage: rect('.progress-storage-control'),
-      footerSentence: rect('.footer-content > p'),
-    };
-  });
-  expect(geometry.trigger).not.toBeNull();
-  expect(geometry.action).not.toBeNull();
-  expect(geometry.storage).not.toBeNull();
-  expect(geometry.footerSentence).not.toBeNull();
-  if (geometry.trigger !== null && geometry.action !== null) expect(overlap(geometry.trigger, geometry.action), JSON.stringify(geometry)).toBe(false);
-  if (geometry.trigger !== null && geometry.storage !== null) expect(overlap(geometry.trigger, geometry.storage), JSON.stringify(geometry)).toBe(false);
-  if (geometry.trigger !== null && geometry.footerSentence !== null) expect(overlap(geometry.trigger, geometry.footerSentence), JSON.stringify(geometry)).toBe(false);
+  const dialogContent = dialog.locator('.update-history-dialog-content');
+  await expect(dialogContent).toBeVisible();
+  await expect(dialogContent).toHaveCSS('overflow-y', 'auto');
+  const closeButton = dialog.getByRole('button', { name: '닫기' });
+  await expect(closeButton).toBeVisible();
+  await expect(closeButton).toBeEnabled();
   await page.keyboard.press('Escape');
   await expect(dialog).toBeHidden();
 }
@@ -122,6 +144,29 @@ test('375px에서 루트 글자 크기 200%로 수리 완료 표와 action이 �
   await completeEvidence(page, 'collision');
   await expect(page.getByRole('heading', { name: '검수 완료' })).toBeVisible();
   await expect(page.getByRole('table', { name: '기하 학습 성취 상태' })).toBeVisible();
+  const comparison = page.locator('.completion-comparison');
+  await expect(comparison).toHaveCSS('overflow-x', 'auto');
+  const comparisonMetrics = await comparison.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+  }));
+  expect(comparisonMetrics.scrollWidth).toBeGreaterThan(comparisonMetrics.clientWidth);
+  const scrolledLeft = await comparison.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+    return element.scrollLeft;
+  });
+  expect(scrolledLeft).toBeGreaterThan(0);
+  const lastColumn = comparison.locator('tbody tr').first().locator('td').last();
+  const scrollerBox = await comparison.boundingBox();
+  const lastColumnBox = await lastColumn.boundingBox();
+  expect(scrollerBox).not.toBeNull();
+  expect(lastColumnBox).not.toBeNull();
+  const reachable = scrollerBox !== null && lastColumnBox !== null
+    && lastColumnBox.x < scrollerBox.x + scrollerBox.width
+    && lastColumnBox.x + lastColumnBox.width > scrollerBox.x
+    && lastColumnBox.y < scrollerBox.y + scrollerBox.height
+    && lastColumnBox.y + lastColumnBox.height > scrollerBox.y;
+  expect(reachable).toBe(true);
   await expectRequiredActionsUsable(page, /다음 미션/);
   const metrics = await page.evaluate(() => ({
     scrollWidth: document.documentElement.scrollWidth,

@@ -13,10 +13,11 @@ Playwright: 1.62.1
 151.0.7922.34, `npx playwright --version` → Version 1.62.1, `node --version` →
 v25.6.1, `npm --version` → 11.9.0, `sw_vers` → macOS 26.5.2 (25F84).
 
-모든 browser 실행은 `--workers=1`로 수행했습니다. standalone focused/full E2E와
-최종 verify는 통과했습니다. macOS sandbox에서 병렬 Chromium MachPort 실행은
-거부되었고, 단일 worker의 escalated standalone 실행은 통과했습니다. 따라서
-integrated launch 차단은 실행 환경 제약이며 앱 assertion 실패와 구분합니다.
+모든 browser 실행은 `--workers=1`로 수행했습니다. 관리형 macOS sandbox에서는
+병렬 여부와 관계없이, `workers=1`인 실행도 page 생성 전에 Chromium MachPort
+권한 오류로 차단되었습니다. 이는 병렬 실행에만 해당하는 실패가 아닙니다. 관리형
+sandbox 밖의 승인된 escalated standalone 실행에서는 focused/full E2E와 최종 verify가
+통과했으며, 실행 환경 차단과 앱 assertion 실패를 구분합니다.
 
 ## 명령별 최신 결과
 
@@ -28,13 +29,19 @@ integrated launch 차단은 실행 환경 제약이며 앱 assertion 실패와 �
 | 02:51:10 | `npm run lint` 및 `npm run typecheck` (verify 내부) | PASS |
 | 02:51:50 | `npm run check:file-size` 및 `npm run check:offline-boundary` (verify 내부) | PASS |
 | 02:51:50–02:51:51 | `npm run build` (verify 내부) | PASS — Three.js chunk advisory만 출력 |
-| 02:51:10–02:51:51 | `npm run verify` | PASS — lint/type/unit/E2E 20/20/file-size/offline/build 모두 통과 |
+| 02:51:10–02:51:51 | `npm run verify` (관리형 sandbox 밖, escalated) | PASS — lint/type/unit 235 tests/E2E 20/20/file-size/offline/build 모두 통과 |
+| 약 02:56 | reviewer `npm run verify` (관리형 sandbox, `workers=1`) | BLOCKED — lint/type/unit은 통과했으나 모든 browser case가 page 생성 전 MachPort 권한 오류로 차단됨. `workers=1`에서도 발생했으며 병렬 전용 실패가 아님 |
+| 03:07:02–03:07:18 | reviewer 후 재검증 `npm run verify` (관리형 sandbox, `workers=1`) | BLOCKED — lint/type/unit은 통과했으나 20개 browser launch가 page 생성 전 MachPort 권한 오류로 차단됨 |
+| 03:09:33–03:09:47 | `npx playwright test e2e/responsive.spec.ts e2e/accessibility.spec.ts --workers=1` (관리형 sandbox 밖, escalated) | PASS — 9/9 |
+| 03:09:50–03:10:17 | `npm run test:e2e` (관리형 sandbox 밖, escalated) | PASS — 20/20 |
+| 03:10:25–03:10:31 | `npm test -- --run` | PASS — 29 files, 238 tests |
+| 03:11:07–03:11:50 | 최종 `npm run verify` (관리형 sandbox 밖, escalated) | PASS — lint/type/unit 238 tests/E2E 20/20/file-size/offline/build 모두 통과 |
 
 ## 고정 환경 결과
 
-- 375×812: PASS. 가로 overflow가 없고 현재 action box가 viewport와 교차합니다.
-- 375×812 + 루트 글자 크기 200%: PASS. 긴 완료 표, action, update trigger와 footer 콘텐츠의 비겹침, dialog viewport 내부 배치를 확인했습니다.
-- 데스크톱 + 루트 글자 크기 200%: PASS. 긴 표, storage label/helper, footer 문장과 trigger의 비겹침을 확인했습니다.
+- 375×812: PASS. 가로 overflow가 없고 현재 action box가 viewport와 교차합니다. ([responsive-375.png](evidence/responsive-375.png))
+- 375×812 + 루트 글자 크기 200%: PASS. 긴 완료 표를 실제로 가로 스크롤해 마지막 열에 도달했고, action·update trigger와 footer 콘텐츠의 비겹침 및 dialog viewport 내부 배치를 확인했습니다. ([responsive-375-200-root-font.png](evidence/responsive-375-200-root-font.png))
+- 데스크톱 + 루트 글자 크기 200%: PASS. 긴 표, storage label/helper, footer 문장과 trigger의 비겹침을 확인했습니다. ([responsive-200-root-font.png](evidence/responsive-200-root-font.png))
 - `prefers-reduced-motion: reduce`: PASS. pulse pseudo-element가 존재하고 computed `animation-name: none`, persistent `3px` outline입니다. ([reduced-motion.png](evidence/reduced-motion.png))
 - forced-colors: PASS (자동 Chromium + axe). 번호·무늬·accessible label을 확인했습니다. ([forced-colors.png](evidence/forced-colors.png))
 - WebGL 비활성: PASS. 앱 부팅 전 context를 차단하고 Canvas 0개, 정확한 fallback·관계 표로 네 mission을 완료했습니다. ([webgl-disabled.png](evidence/webgl-disabled.png))
