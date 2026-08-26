@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { getMissionById } from '../../src/content/missions/catalog';
+import { getEvidenceContext, expectedEvidenceSentence } from '../../src/domain/learning/evidence';
+import { moveFace } from '../../src/domain/learning/repair';
 import { validateCubeNet } from '../../src/domain/net/validateCubeNet';
+import type { RepairMissionDefinition } from '../../src/domain/learning/types';
 import { EvidenceScreen } from '../../src/screens/EvidenceScreen';
 
 afterEach(cleanup);
@@ -73,5 +76,40 @@ describe('EvidenceScreen', () => {
     await user.click(screen.getByRole('button', { name: '근거 확인' }));
     expect(onSubmit).not.toHaveBeenCalled();
     expect(screen.getByRole('alert')).toHaveTextContent('검사 결과를 확인할 수 없어');
+  });
+
+  it('uses the base face as repair-02 relation subject in preview', async () => {
+    const user = userEvent.setup();
+    const mission = getMissionById('cube-repair-02') as RepairMissionDefinition;
+    const validation = validateCubeNet(mission.net, mission.baseFaceId);
+    const diagnosis = {
+      selectedErrorType: 'overlap' as const,
+      selectedFaceIds: [...validation.collisions[0]!.faceIds],
+      selectedMissingDirection: validation.missingNormals[0],
+    };
+    const repair = {
+      faceId: mission.answer.repairMove.faceId,
+      target: mission.answer.repairMove.to,
+      accepted: true,
+      candidate: moveFace(mission.net, mission.answer.repairMove.faceId, mission.answer.repairMove.to),
+    };
+    const context = getEvidenceContext(mission, { validation, diagnosis, repair });
+    const pair = context.pairCandidates.find((candidate) => (
+      candidate.a === context.baseFaceId || candidate.b === context.baseFaceId
+    ))!;
+    const expected = expectedEvidenceSentence(mission, {
+      oppositePair: pair,
+      selectedTerms: ['맞은편', '겹침'],
+      completedSentence: '',
+    }, context)!;
+    const onSubmit = vi.fn();
+    render(<EvidenceScreen mission={mission} validation={validation} diagnosis={diagnosis} repair={repair} onSubmit={onSubmit} />);
+    await user.click(screen.getByRole('button', { name: '1번 면' }));
+    await user.click(screen.getByRole('button', { name: '3번 면' }));
+    await user.selectOptions(screen.getByLabelText('첫 번째 기하 낱말'), '맞은편');
+    await user.selectOptions(screen.getByLabelText('두 번째 기하 낱말'), '겹침');
+    expect(expected).toBe('3번 면을 옮기면 겹침이 사라지고 1번 면의 맞은편 관계를 확인할 수 있습니다.');
+    expect(screen.getByText(expected)).toBeVisible();
+    expect(screen.queryByText(/3번 면의 맞은편/u)).not.toBeInTheDocument();
   });
 });

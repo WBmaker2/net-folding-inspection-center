@@ -64,9 +64,9 @@ describe('evidence sentence authority', () => {
       'cube-opposite-01': '1번 면과 3번 면은 접는 방향을 따라가면 서로 맞은편이 됩니다.',
       'cube-opposite-02': '2번 면과 3번 면은 서로 반대인 면을 가져 맞은편 관계입니다.',
       'cube-collision-01': '2번 면과 6번 면은 같은 면을 차지하여 겹침이 생깁니다.',
-      'cube-collision-02': '3번 면과 4번 면이 같은 면에 놓여 겹침이고, 비어 있는 방향도 확인했습니다.',
+      'cube-collision-02': '3번 면과 4번 면이 같은 면에 놓여 겹침이 생겼고, 비어 있는 방향도 확인했습니다.',
       'cube-repair-01': '6번 면을 옮겨 겹침을 없애고 모든 면이 이어지도록 수리했습니다.',
-      'cube-repair-02': '3번 면을 옮기면 겹침이 사라지고 3번 면의 맞은편 관계를 확인할 수 있습니다.',
+      'cube-repair-02': '3번 면을 옮기면 겹침이 사라지고 1번 면의 맞은편 관계를 확인할 수 있습니다.',
     } as const;
     for (const mission of loadMissionCatalog()) {
       const validation = validateCubeNet(mission.net, mission.baseFaceId);
@@ -95,7 +95,7 @@ describe('evidence sentence authority', () => {
       expect(pair, mission.id).toBeDefined();
       const canonical = CANONICAL_EVIDENCE_TERMS[mission.id];
       const secondFace = pair === undefined ? undefined : mission.kind === 'repair'
-        ? pair.a === context.baseFaceId ? pair.b : pair.a
+        ? context.baseFaceId
         : pair.b;
       const firstFace = mission.kind === 'repair' ? context.repairFaceId : pair?.a;
       const completedSentence = firstFace === undefined || pair === undefined

@@ -83,7 +83,7 @@ export function EvidenceScreen({
   const preview = draft === null ? null : buildEvidenceSentence(mission, {
     firstFace: mission.kind === 'repair' ? context.repairFaceId as FaceId : selectedPair!.a,
     ...(mission.kind === 'repair'
-      ? { secondFace: selectedPair!.a === context.baseFaceId ? selectedPair!.b : selectedPair!.a }
+      ? { secondFace: context.baseFaceId }
       : { secondFace: selectedPair!.b }),
     term1: pathTerm as GeometryTerm,
     term2: relationshipTerm as GeometryTerm,

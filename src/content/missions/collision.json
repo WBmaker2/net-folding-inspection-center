@@ -62,7 +62,7 @@
       { "level": 3, "focus": "compare-candidates", "text": "F3과 F4 두 후보의 최종 위치를 비교하고, 나타나지 않은 방향도 함께 표시해 보세요." }
     ],
     "sentenceFrame": {
-      "template": "{firstFace}와 {secondFace}가 같은 {term1}에 놓여 {term2}이고, 비어 있는 방향도 확인했습니다.",
+      "template": "{firstFace}와 {secondFace}가 같은 {term1}에 놓여 {term2}이 생겼고, 비어 있는 방향도 확인했습니다.",
       "placeholders": ["firstFace", "secondFace", "term1", "term2"]
     },
     "targetVocabulary": ["겹침", "빈 면", "면", "모서리", "접는 방향"]

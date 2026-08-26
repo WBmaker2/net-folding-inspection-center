@@ -122,11 +122,6 @@ const asPair = (pair: readonly [FaceId, FaceId]): OppositePair => ({
 const pairHasFace = (pair: OppositePair, faceId: FaceId): boolean => (
   pair.a === faceId || pair.b === faceId
 );
-const otherFace = (pair: OppositePair, faceId: FaceId): FaceId | undefined => {
-  if (pair.a === faceId) return pair.b;
-  if (pair.b === faceId) return pair.a;
-  return undefined;
-};
 
 /**
  * Fills only the catalog's allow-listed sentence placeholders. `null` means
@@ -292,7 +287,7 @@ export const expectedEvidenceSentence = (
     ? context.repairFaceId
     : pair.a;
   const secondFace = mission.kind === 'repair'
-    ? otherFace(pair, context.baseFaceId)
+    ? context.baseFaceId
     : pair.b;
   if (firstFace === undefined) return null;
   return buildEvidenceSentence(mission, {
