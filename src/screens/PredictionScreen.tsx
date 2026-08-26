@@ -109,6 +109,7 @@ export function PredictionScreen({ mission, onSubmit }: PredictionScreenProps): 
           net={mission.net}
           mode="select-base"
           selectedFaceId={baseFaceId}
+          referenceFaceId={baseFaceId ?? mission.baseFaceId}
           onFaceSelect={selectBase}
           label="기준면 선택 전개도"
         />
@@ -123,6 +124,7 @@ export function PredictionScreen({ mission, onSubmit }: PredictionScreenProps): 
           net={mission.net}
           mode="select-move-target"
           selectedFaceId={predictedTopFaceId}
+          referenceFaceId={baseFaceId ?? mission.baseFaceId}
           onFaceSelect={selectTop}
           label="예상 윗면 선택 전개도"
         />

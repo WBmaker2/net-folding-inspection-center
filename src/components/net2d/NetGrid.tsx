@@ -8,6 +8,8 @@ export interface NetGridProps {
   readonly net: NetDefinition;
   readonly mode: NetGridMode;
   readonly selectedFaceId?: FaceId | null;
+  /** 선택된 타일과 무관하게 위치를 설명할 기준면입니다. */
+  readonly referenceFaceId?: FaceId | null;
   readonly onFaceSelect?: (faceId: FaceId) => void;
   readonly label: string;
 }
@@ -64,6 +66,7 @@ export function NetGrid({
   net,
   mode,
   selectedFaceId = null,
+  referenceFaceId = null,
   onFaceSelect,
   label,
 }: NetGridProps): React.JSX.Element {
@@ -71,8 +74,8 @@ export function NetGrid({
   const [focusedFaceId, setFocusedFaceId] = useState<FaceId | undefined>(firstFaceId);
   const buttonRefs = useRef<Partial<Record<FaceId, HTMLButtonElement | null>>>({});
   const selectedFace = useMemo(
-    () => net.faces.find((face) => face.id === selectedFaceId),
-    [net.faces, selectedFaceId],
+    () => net.faces.find((face) => face.id === (referenceFaceId ?? selectedFaceId)),
+    [net.faces, referenceFaceId, selectedFaceId],
   );
   const gridBounds = useMemo(() => {
     const xs = net.faces.map((face) => face.grid.x);
