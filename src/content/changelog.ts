@@ -19,4 +19,5 @@ export const CHANGELOG: readonly UpdateEntry[] = Object.freeze([
   Object.freeze({ date: '2026-08-27', category: '접근성', summary: '핵심 단계 강조·모션 감소·업데이트 내역 접근성 개선' }),
   Object.freeze({ date: '2026-08-27', category: '콘텐츠', summary: '선택형 진행 저장·교육 모형 한계·오프라인 경계 추가' }),
   Object.freeze({ date: '2026-08-27', category: '접근성', summary: '모바일·키보드·스크린 리더·2D 완료 흐름 검증' }),
+  Object.freeze({ date: '2026-08-27', category: '개발', summary: '불가능한 접기 순서 복구·중첩 링크 오프라인 경계 강화' }),
 ]);
