@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { buildAdjacency } from '../../src/domain/net/adjacency';
 import {
   computeFaceFrames,
+  createFoldSequence,
+  getFoldSnapshot,
   getOppositePairs,
 } from '../../src/domain/net/foldEngine';
 import type { FaceDefinition, FaceFrame, NetDefinition } from '../../src/domain/net/types';
@@ -106,5 +108,40 @@ describe('cube fold frame propagation', () => {
       { faceId: 'F1', neighborFaceId: 'F4', direction: 'south' },
       { faceId: 'F1', neighborFaceId: 'F5', direction: 'west' },
     ]);
+  });
+
+  it('creates a deterministic five-fold sequence and immutable snapshots', () => {
+    const sequence = createFoldSequence(canonicalValidNet, 'F1', [
+      'F2', 'F3', 'F5', 'F6', 'F4',
+    ]);
+
+    expect(sequence.steps.map((step) => step.movingFaceId)).toEqual([
+      'F2', 'F3', 'F5', 'F6', 'F4',
+    ]);
+    expect(sequence.steps[0]).toMatchObject({
+      index: 1,
+      movingFaceId: 'F2',
+      hingeFaceId: 'F1',
+      direction: 'north',
+      angleDegrees: 90,
+    });
+    expect(sequence.steps[0]?.startFrame).toBeDefined();
+    expect(sequence.steps[0]?.endFrame).toEqual(
+      computeFaceFrames(canonicalValidNet, 'F1').frames.get('F2'),
+    );
+
+    expect(sequence.snapshots).toHaveLength(6);
+    expect(getFoldSnapshot(sequence, 0).settledFaceIds).toEqual(['F1']);
+    expect(getFoldSnapshot(sequence, 5).settledFaceIds).toHaveLength(6);
+    expect(getFoldSnapshot(sequence, 5).frames).toEqual(
+      computeFaceFrames(canonicalValidNet, 'F1').frames,
+    );
+    expect(getFoldSnapshot(sequence, 0).frames).not.toBe(getFoldSnapshot(sequence, 1).frames);
+  });
+
+  it('rejects a requested fold that does not share an edge with settled faces', () => {
+    expect(() => createFoldSequence(canonicalValidNet, 'F1', [
+      'F3', 'F2', 'F5', 'F6', 'F4',
+    ])).toThrowError('F3');
   });
 });

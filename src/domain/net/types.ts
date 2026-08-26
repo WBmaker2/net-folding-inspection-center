@@ -45,6 +45,35 @@ export interface NetDefinition {
   readonly faces: readonly FaceDefinition[];
 }
 
+export interface FoldStep {
+  readonly index: number;
+  readonly movingFaceId: FaceId;
+  readonly hingeFaceId: FaceId;
+  readonly direction: FoldDirection;
+  readonly angleDegrees: 90;
+  readonly startFrame: FaceFrame;
+  readonly endFrame: FaceFrame;
+}
+
+export interface FoldSnapshot {
+  readonly stepIndex: number;
+  readonly settledFaceIds: readonly FaceId[];
+  readonly frames: ReadonlyMap<FaceId, FaceFrame>;
+}
+
+export interface FoldSequence {
+  readonly baseFaceId: FaceId;
+  readonly steps: readonly FoldStep[];
+  readonly snapshots: readonly FoldSnapshot[];
+  readonly frames: ReadonlyMap<FaceId, FaceFrame>;
+}
+
+export interface DecorationOrientationResult {
+  readonly worldUp: AxisDirection;
+  readonly targetWorldUp: AxisDirection;
+  readonly matchesTarget: boolean;
+}
+
 export interface PredictionRecord {
   readonly baseFaceId: FaceId;
   readonly predictedTopFaceId: FaceId;
