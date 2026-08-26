@@ -121,6 +121,7 @@ describe('progress storage', () => {
     expect(store.load()?.prediction).toEqual(f2BasePrediction);
     expect(store.load()?.attempts.predictions[0]).toEqual(f2BasePrediction);
   });
+
   it('round-trips a fully submitted F2-base collision prediction through persisted reachability', () => {
     const selected = learningReducer(createInitialLearningState(), {
       type: 'SELECT_MISSION', missionId: 'cube-collision-01',

@@ -38,4 +38,13 @@ describe('AppShell', () => {
     const trigger = screen.getByRole('button', { name: '업데이트 내역' });
     expect(trigger.closest('footer')).not.toBeNull();
   });
+
+  it('shows the exact model boundary and leaves optional saving unchecked by default', () => {
+    render(<App />);
+    expect(screen.getByText(
+      '이 가상 접기는 면의 연결 관계를 보여 주는 기하 모형이며 실제 종이의 두께·휘어짐·포장 강도·안전성을 보장하지 않습니다.',
+      { exact: true },
+    )).toBeVisible();
+    expect(screen.getByLabelText('이 탭에서 새로고침 후에도 진행 저장')).not.toBeChecked();
+  });
 });

@@ -40,7 +40,7 @@ export function IntakeScreen({
       <p className="intro-copy">미션을 하나 골라 기준면과 접는 순서를 먼저 예측해 보세요.</p>
       <p className="intro-copy">예측한 뒤 한 면씩 접어 보세요.</p>
       <p className="model-note">
-        이 활동은 실제 종이의 두께·탄성·포장 강도를 재현하지 않는 기하 모형입니다.
+        이 가상 접기는 면의 연결 관계를 보여 주는 기하 모형이며 실제 종이의 두께·휘어짐·포장 강도·안전성을 보장하지 않습니다.
       </p>
 
       <div className="mission-groups">

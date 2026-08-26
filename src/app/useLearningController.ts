@@ -7,7 +7,9 @@ import {
   learningReducer,
 } from '../domain/learning/reducer';
 import {
-  createMemoryProgressStore,
+  createDefaultProgressStore,
+  rehydratePersistedProgress,
+  sanitizePersistedProgress,
   syncLearningPersistence,
 } from '../domain/learning/storage';
 import type {
@@ -32,6 +34,7 @@ export interface LearningController {
   readonly dispatch: React.Dispatch<LearningAction>;
   readonly selectMission: (missionId: MissionId) => void;
   readonly resetMission: () => void;
+  readonly restoredFromStore: boolean;
 }
 
 /**
@@ -41,11 +44,23 @@ export interface LearningController {
 export function useLearningController(
   options: LearningControllerOptions = {},
 ): LearningController {
-  const [state, dispatch] = useReducer(learningReducer, undefined, createInitialLearningState);
   const store = useMemo(
-    () => options.store ?? createMemoryProgressStore(),
+    () => options.store ?? createDefaultProgressStore(),
     [options.store],
   );
+  const initialLoad = useMemo((): { readonly state: LearningState; readonly restored: boolean } => {
+    try {
+      const raw = store.load();
+      const sanitized = raw === null ? null : sanitizePersistedProgress(raw);
+      const restored = sanitized === null ? null : rehydratePersistedProgress(sanitized);
+      if (restored !== null) return { state: restored, restored: true };
+      if (raw !== null && sanitized !== null) store.clear();
+    } catch {
+      // Storage and malformed host injections fail closed to a fresh session.
+    }
+    return { state: createInitialLearningState(), restored: false };
+  }, [store]);
+  const [state, dispatch] = useReducer(learningReducer, initialLoad.state);
   const previousState = useRef<LearningState | null>(null);
 
   useEffect(() => {
@@ -89,5 +104,6 @@ export function useLearningController(
     dispatch,
     selectMission,
     resetMission,
+    restoredFromStore: initialLoad.restored,
   };
 }

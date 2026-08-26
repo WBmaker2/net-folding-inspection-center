@@ -14,6 +14,31 @@
   cursor: pointer;
 }
 
+.progress-storage-control {
+  display: grid;
+  gap: 0.2rem;
+  max-width: 25rem;
+  color: var(--ink);
+}
+
+.progress-storage-control label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-weight: 700;
+}
+
+.progress-storage-control small {
+  color: var(--muted-ink);
+  font-size: 0.75rem;
+}
+
+.restore-notice {
+  margin: 0;
+  color: var(--accent);
+  font-weight: 800;
+}
+
 .update-history-dialog {
   width: min(34rem, calc(100vw - 2rem));
   max-height: calc(100dvh - 2rem);
