@@ -97,6 +97,17 @@ describe('scene model and CubeFoldViewer', () => {
     expect(buildCameraPose('top').up).toEqual([0, 0, -1]);
   });
 
+  it('centers a flat net on all scene faces and chooses a readable zoom', () => {
+    const snapshot = getFoldSnapshot(sequence, 0);
+    const faces = buildSceneFaces(snapshot, mission.net);
+    const baseFace = faces.find((face) => face.id === mission.baseFaceId);
+    const pose = buildCameraPose('front', baseFace, faces);
+
+    expect(pose.target).not.toEqual(baseFace?.frame.center);
+    expect(pose.zoom).toBeGreaterThan(3.8);
+    expect(pose.zoom).toBeLessThanOrEqual(90);
+  });
+
   it('provides exactly four deterministic fixed view buttons', async () => {
     renderViewer();
     expect(screen.queryByRole('button', { name: /자동 회전/ })).not.toBeInTheDocument();

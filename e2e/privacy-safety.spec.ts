@@ -92,8 +92,8 @@ test.describe('privacy and safety boundaries', () => {
     ))).toBe(true);
     await page.getByRole('button', { name: /^1번 면/ }).click();
     await page.getByRole('button', { name: /^3번 면/ }).click();
-    await page.getByLabel('첫 번째 기하 낱말').selectOption('맞은편');
-    await page.getByLabel('두 번째 기하 낱말').selectOption('접는 방향');
+    await page.getByLabel('관계를 나타내는 낱말').selectOption('맞은편');
+    await page.getByLabel('까닭을 나타내는 낱말').selectOption('접는 방향');
     await page.getByRole('button', { name: '근거 확인' }).click();
     await page.getByRole('button', { name: '미션 완료 확인' }).click();
     await expect(page.getByRole('heading', { name: '검수 완료' })).toBeVisible();

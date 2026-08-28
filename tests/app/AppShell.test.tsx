@@ -1,6 +1,7 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import { App } from '../../src/App';
 
 const layoutStyles = readFileSync(
@@ -46,5 +47,16 @@ describe('AppShell', () => {
       { exact: true },
     )).toBeVisible();
     expect(screen.getByLabelText('이 탭에서 새로고침 후에도 진행 저장')).not.toBeChecked();
+  });
+
+  it('shows stage progress and lets a learner return to mission selection', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: '면 위치 추적 1 미션 선택' }));
+
+    expect(screen.getByText('2 / 6 · 예측')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: '미션 다시 고르기' }));
+    expect(screen.getByRole('heading', { name: '검수 접수' })).toBeVisible();
+    expect(screen.queryByText('2 / 6 · 예측')).not.toBeInTheDocument();
   });
 });

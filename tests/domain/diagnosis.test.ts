@@ -3,6 +3,7 @@ import { getMissionById } from '../../src/content/missions/catalog';
 import { validateCubeNet } from '../../src/domain/net/validateCubeNet';
 import { validationMatches } from '../../src/domain/learning/diagnosis';
 import { createFoldSequence } from '../../src/domain/net/foldEngine';
+import { axisLabel, directionLabel } from '../../src/domain/net/directionLabels';
 
 const mission = getMissionById('cube-collision-01');
 const expected = validateCubeNet(mission.net, 'F1');
@@ -90,5 +91,15 @@ describe('validationMatches', () => {
     const provided = { ...expected, frames };
     expect(() => validationMatches(provided, expected)).not.toThrow();
     expect(validationMatches(provided, expected)).toBe(false);
+  });
+});
+
+describe('learner-facing direction labels', () => {
+  it('maps renderer-neutral axes without changing the stored enum values', () => {
+    expect((['+x', '-x', '+y', '-y', '+z', '-z'] as const).map(axisLabel)).toEqual([
+      '오른쪽', '왼쪽', '위', '아래', '앞', '뒤',
+    ]);
+    expect(directionLabel('+x')).toBe('오른쪽 방향');
+    expect(directionLabel(undefined)).toBe('확인할 수 없음');
   });
 });

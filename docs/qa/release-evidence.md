@@ -41,6 +41,30 @@ sandbox 밖의 승인된 escalated standalone 실행에서는 focused/full E2E�
 | 03:40:38–03:41:06 | `npm run test:e2e` | PASS — 21/21, 단일 worker |
 | 03:41–03:42 | 최종 `npm run verify` (관리형 sandbox 밖, escalated) | PASS — lint/type/unit 246 tests/E2E 21/21/file-size/offline/build 모두 통과 |
 
+## 2026-08-28 개선 wave 로컬 검증
+
+이번 개선은 아직 커밋·푸시·배포하지 않은 작업 트리에서 확인했습니다. 기존 공개
+Pages 주소는 이전 배포 증거로만 남아 있으며, 아래 결과가 공개 사이트에 반영되었다고
+해석하지 않습니다.
+
+| 명령 | 결과 |
+|---|---|
+| `npm run lint` | PASS — 오류·경고 없음 |
+| `npm run typecheck` | PASS |
+| `npm test -- --run` | PASS — 29 files, 254 tests |
+| `npm run check:file-size` | PASS — authored files under 500 lines |
+| `npm run check:offline-boundary` | PASS — `src` 외부 클라이언트·URL 없음 |
+| `npm run build` | PASS — Vite build 완료, Three.js chunk advisory만 출력 |
+| `npm run test:e2e` | PASS — 21/21, 단일 worker |
+
+추가로 375px, 200% 글자 크기, reduced-motion, forced-colors, WebGL 비활성,
+키보드 전용 흐름과 단계 제목 포커스를 Playwright·axe로 확인했습니다. VoiceOver 구현·검증은
+새 사용자 지침에 따라 범위에서 제외했습니다.
+
+이번 wave의 완료 비교표는 375px에서 고정 최소 폭을 사용하지 않고 칸 안에서
+줄바꿈합니다. 2026-08-27 기록의 “가로 스크롤로 마지막 열에 도달” 문장은 당시
+구현의 역사적 결과이며, 현재 작업 트리의 새 결과는 가로 스크롤 없이 읽히는 것입니다.
+
 ## 고정 환경 결과
 
 - 375×812: PASS. 가로 overflow가 없고 현재 action box가 viewport와 교차합니다. ([responsive-375.png](evidence/responsive-375.png))
@@ -61,12 +85,11 @@ sandbox 밖의 승인된 escalated standalone 실행에서는 focused/full E2E�
 - [forced-colors.png](evidence/forced-colors.png)
 - [webgl-disabled.png](evidence/webgl-disabled.png)
 
-## VoiceOver 및 수동 blocker
+## VoiceOver 범위 제외
 
-macOS VoiceOver + Safari: **NOT RUN — 사용자 수동 확인 필요**. headless
-Chromium, axe, accessibility tree는 실제 보조기술 세션의 대체가 아닙니다. Safari에서
-면 이름·접힘 live region·관계 표·dialog Escape 초점 복귀를 직접 확인하기 전까지
-release-evidence blocker입니다.
+macOS VoiceOver + Safari: **범위 제외**. 학생용 VoiceOver·음성 안내를 구현하지 않으며,
+VoiceOver 수동 보조기술 검증도 수행하지 않습니다. 키보드·axe·접근성 트리 자동화 결과만
+현재 릴리스 범위의 접근성 증거로 사용합니다.
 
 ## 공개 배포 확인
 
@@ -90,5 +113,5 @@ release-evidence blocker입니다.
 원격 저장소 생성, push, GitHub Pages 공개와 workflow 배포를 수행했습니다. HVC
 서비스 등록은 이번 요청 범위에 포함하지 않아 수행하지 않았습니다. 최종 수정 wave에서
 불가능한 접기 순서의 복귀·재제출과 중첩 symbolic link fail-closed 경계를 추가했고,
-Pages-safe favicon을 배포했습니다. VoiceOver + Safari 수동 확인은 여전히 사용자
-확인이 필요한 blocker입니다.
+Pages-safe favicon을 배포했습니다. VoiceOver + Safari 구현·검증은 사용자 지침에 따라
+범위에서 제외했습니다.

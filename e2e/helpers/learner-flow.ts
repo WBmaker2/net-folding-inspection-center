@@ -78,13 +78,13 @@ export async function completeRemainingFolding(page: Page, remainingSteps: numbe
 export async function completeDiagnosis(page: Page, kind: MissionKind): Promise<void> {
   await expect(page.getByRole('heading', { name: '접힌 결과 진단하기' })).toBeVisible();
   if (kind === 'tracking') {
-    await page.getByRole('radio', { name: '장식 방향을 확인해야 해요' }).check();
+    await page.getByRole('radio', { name: '무늬 방향이 달라요' }).check();
     await faceButton(page, 3).click();
   } else {
     await page.getByRole('radio', { name: '두 면이 같은 자리에 겹쳐요' }).check();
     await faceButton(page, 2).click();
     await faceButton(page, 6).click();
-    await page.getByRole('radio', { name: '+x 방향' }).check();
+    await page.getByRole('radio', { name: '오른쪽 방향' }).check();
   }
   await expect(page.getByRole('button', { name: '진단 확인' })).toBeEnabled();
   await expectOnePulse(page, /진단 확인/);
@@ -105,18 +105,18 @@ export async function completeEvidence(page: Page, kind: MissionKind): Promise<v
   if (kind === 'repair') {
     await faceButton(page, 1).click();
     await faceButton(page, 3).click();
-    await page.getByLabel('첫 번째 기하 낱말').selectOption({ label: '면' });
-    await page.getByLabel('두 번째 기하 낱말').selectOption({ label: '겹침' });
+    await page.getByLabel('관계를 나타내는 낱말').selectOption({ label: '면' });
+    await page.getByLabel('까닭을 나타내는 낱말').selectOption({ label: '겹침' });
   } else if (kind === 'collision') {
     await faceButton(page, 2).click();
     await faceButton(page, 6).click();
-    await page.getByLabel('첫 번째 기하 낱말').selectOption({ label: '겹침' });
-    await page.getByLabel('두 번째 기하 낱말').selectOption({ label: '면' });
+    await page.getByLabel('관계를 나타내는 낱말').selectOption({ label: '겹침' });
+    await page.getByLabel('까닭을 나타내는 낱말').selectOption({ label: '면' });
   } else {
     await faceButton(page, 1).click();
     await faceButton(page, kind === 'tracking' ? 3 : 3).click();
-    await page.getByLabel('첫 번째 기하 낱말').selectOption({ label: '맞은편' });
-    await page.getByLabel('두 번째 기하 낱말').selectOption({ label: '접는 방향' });
+    await page.getByLabel('관계를 나타내는 낱말').selectOption({ label: '맞은편' });
+    await page.getByLabel('까닭을 나타내는 낱말').selectOption({ label: '접는 방향' });
   }
   await expect(page.getByRole('button', { name: '근거 확인' })).toBeEnabled();
   await expectOnePulse(page, /근거 확인/);

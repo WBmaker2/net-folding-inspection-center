@@ -13,6 +13,7 @@ import type {
   FoldSequence,
 } from '../domain/net/types';
 import type { CubeValidationResult } from '../domain/net/validateCubeNet';
+import { axisLabel, directionLabel } from '../domain/net/directionLabels';
 import { useFocusHeading } from '../hooks/useFocusHeading';
 import { PrimaryAction } from '../components/common/PrimaryAction';
 import '../styles/net2d.css';
@@ -29,19 +30,21 @@ export interface DiagnosisScreenProps {
 }
 
 const AXES: readonly { readonly value: AxisDirection; readonly label: string }[] = [
-  { value: '+x', label: '+x 방향' },
-  { value: '-x', label: '-x 방향' },
-  { value: '+y', label: '+y 방향' },
-  { value: '-y', label: '-y 방향' },
-  { value: '+z', label: '+z 방향' },
-  { value: '-z', label: '-z 방향' },
+  ...(['+x', '-x', '+y', '-y', '+z', '-z'] as const).map((value) => ({
+    value,
+    label: `${axisLabel(value)} 방향`,
+  })),
 ];
 
 const errorChoices = [
   { value: 'overlap' as const, label: '두 면이 같은 자리에 겹쳐요' },
   { value: 'missing-face' as const, label: '빈 면이 생겨요' },
-  { value: 'decoration-direction' as const, label: '장식 방향을 확인해야 해요' },
+  { value: 'decoration-direction' as const, label: '무늬 방향이 달라요' },
 ];
+
+const errorChoicesFor = (mission: MissionDefinition) => (
+  mission.kind === 'tracking' ? [errorChoices[2]] : errorChoices
+);
 
 const validationCopy = (validation: CubeValidationResult | null): string => {
   if (validation === null) return '전개도 검사 결과를 읽을 수 없습니다.';
@@ -49,8 +52,6 @@ const validationCopy = (validation: CubeValidationResult | null): string => {
   if (validation.isValid) return '전개도 검사: 여섯 면이 서로 다른 방향에 놓였습니다.';
   return '전개도 검사: 접는 관계를 다시 확인해야 합니다.';
 };
-
-const directionLabel = (direction: AxisDirection | undefined): string => direction ?? '확인할 수 없음';
 
 const evaluationUnavailableForTracking = (value: DecorationOrientationResult | undefined): boolean => {
   try {
@@ -187,14 +188,14 @@ export function DiagnosisScreen({
       setFeedback(
         actual === undefined || target === undefined
           ? '장식 방향 결과가 없어 진단을 확정할 수 없습니다.'
-          : `현재 장식 방향은 ${actual}, 목표 방향은 ${target}입니다. 두 방향을 비교해 보세요.`,
+          : `현재 장식 방향은 ${directionLabel(actual)}, 목표 방향은 ${directionLabel(target)}입니다. 두 방향을 비교해 보세요.`,
       );
     } else {
       setFeedback(
         selectedErrorType === 'overlap' && selectedFaceIds.length === 2
           ? (nextReviewStep === null
-            ? '아직 맞는 원인을 찾지 못했습니다. 같은 법선이 되는 단계가 없어 처음부터 다시 살펴보세요.'
-            : `아직 맞는 원인을 찾지 못했습니다. 선택한 두 면이 처음 같은 법선이 된 ${nextReviewStep}단계를 되돌아보세요.`)
+            ? '아직 맞는 원인을 찾지 못했습니다. 두 면이 같은 방향이 되는 단계가 없어 처음부터 다시 살펴보세요.'
+            : `아직 맞는 원인을 찾지 못했습니다. 선택한 두 면이 처음 같은 방향이 된 ${nextReviewStep}단계를 되돌아보세요.`)
           : '아직 맞는 원인을 찾지 못했습니다. 접힌 면과 모서리를 다시 살펴보세요.',
       );
     }
@@ -209,7 +210,7 @@ export function DiagnosisScreen({
       <section className="diagnosis-validation-panel" aria-label="전개도 유효성 검사">
         <h2>전개도 유효성</h2>
         <p>{validationCopy(renderValidation)}</p>
-        {renderValidation?.collisions.length ? <p>겹침 후보가 있어 면의 법선 방향을 비교합니다.</p> : null}
+        {renderValidation?.collisions.length ? <p>겹침 후보가 있어 면이 향하는 방향을 비교합니다.</p> : null}
       </section>
 
       {mission.kind === 'tracking' && (
@@ -219,7 +220,7 @@ export function DiagnosisScreen({
             <p>{suppliedDecoration === undefined ? '아직 장식 방향 결과를 확인하지 않았습니다.' : '장식 방향 결과를 확인할 수 없습니다.'}</p>
           ) : suppliedDecoration !== undefined ? (
             <p>
-              실제 방향: {suppliedDecoration.worldUp} · 목표 방향: {suppliedDecoration.targetWorldUp} ·
+              실제 방향: {directionLabel(suppliedDecoration.worldUp)} · 목표 방향: {directionLabel(suppliedDecoration.targetWorldUp)} ·
               {' '}{suppliedDecoration.matchesTarget ? '목표와 같습니다.' : '목표와 다릅니다.'}
             </p>
           ) : null}
@@ -241,17 +242,17 @@ export function DiagnosisScreen({
           </div>
           <p
             className="diagnosis-missing-axis"
-            aria-label={`비어 있는 축 방향 ${collisionEvidence.missingDirection} 윤곽`}
+            aria-label={`비어 있는 방향 ${directionLabel(collisionEvidence.missingDirection)} 윤곽`}
           >
             <span aria-hidden="true">□</span>
-            비어 있는 축 방향 윤곽: {collisionEvidence.missingDirection}
+            비어 있는 방향 윤곽: {directionLabel(collisionEvidence.missingDirection)}
           </p>
         </section>
       )}
 
       <fieldset className="diagnosis-fieldset">
         <legend>1. 어떤 오류인가요?</legend>
-        {errorChoices.map((choice) => (
+        {errorChoicesFor(mission).map((choice) => (
           <label key={choice.value} className="diagnosis-radio-label">
             <input
               type="radio"
@@ -288,7 +289,7 @@ export function DiagnosisScreen({
 
       {selectedErrorType === 'overlap' && (
         <fieldset className="diagnosis-fieldset">
-          <legend>3. 비어 있는 축 방향을 골라 보세요</legend>
+          <legend>3. 비어 있는 방향을 골라 보세요</legend>
           <div className="diagnosis-axis-options">
             {AXES.map((axis) => (
               <label key={axis.value} className="diagnosis-radio-label">
@@ -318,7 +319,7 @@ export function DiagnosisScreen({
         <p className="field-error" role="alert">
           {selectedFaceIds.length < maxFaceCount
             ? `관련 면을 ${maxFaceCount}개 골라 주세요.`
-            : '비어 있는 축 방향을 골라 주세요.'}
+            : '비어 있는 방향을 골라 주세요.'}
         </p>
       )}
       {submitError && <p className="field-error" role="alert">{submitError}</p>}

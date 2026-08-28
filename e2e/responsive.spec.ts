@@ -130,7 +130,7 @@ test('200% 루트 글자 크기 데스크톱에서 긴 표와 필수 action이 v
   await page.screenshot({ path: 'docs/qa/evidence/responsive-200-root-font.png', fullPage: true });
 });
 
-test('375px에서 루트 글자 크기 200%로 수리 완료 표와 action이 겹치지 않는다', async ({ page }) => {
+test('375px에서 루트 글자 크기 200%로 수리 완료 표와 action이 viewport 안에 있다', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
   await page.evaluate(() => { document.documentElement.style.fontSize = '200%'; });
@@ -150,12 +150,12 @@ test('375px에서 루트 글자 크기 200%로 수리 완료 표와 action이 �
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
   }));
-  expect(comparisonMetrics.scrollWidth).toBeGreaterThan(comparisonMetrics.clientWidth);
+  expect(comparisonMetrics.scrollWidth).toBeLessThanOrEqual(comparisonMetrics.clientWidth);
   const scrolledLeft = await comparison.evaluate((element) => {
     element.scrollLeft = element.scrollWidth;
     return element.scrollLeft;
   });
-  expect(scrolledLeft).toBeGreaterThan(0);
+  expect(scrolledLeft).toBe(0);
   const lastColumn = comparison.locator('tbody tr').first().locator('td').last();
   const scrollerBox = await comparison.boundingBox();
   const lastColumnBox = await lastColumn.boundingBox();

@@ -8,6 +8,7 @@ import { FaceRelationTable } from '../components/net2d/FaceRelationTable';
 import { describeFoldSnapshot } from '../components/net2d/FoldStateDescription';
 import { CubeFoldViewer } from '../components/net3d/CubeFoldViewer';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
+import { useFocusHeading } from '../hooks/useFocusHeading';
 import { PrimaryAction } from '../components/common/PrimaryAction';
 import type { CriticalActionId } from '../domain/learning/types';
 import '../styles/net2d.css';
@@ -42,6 +43,7 @@ export function FoldingScreen({
   onReturnToPrediction,
   criticalActionId,
 }: FoldingScreenProps): React.JSX.Element {
+  const headingRef = useFocusHeading<HTMLHeadingElement>();
   const reducedMotion = usePrefersReducedMotion();
   const [stepIndex, setStepIndex] = useState(() => clampStep(initialStepIndex));
   const [singleFaceMode, setSingleFaceMode] = useState(false);
@@ -78,7 +80,7 @@ export function FoldingScreen({
         aria-describedby="folding-model-boundary"
       >
         <p className="eyebrow">접기실 · 2D 관계 보기</p>
-        <h1 id="folding-title">한 면씩 접기</h1>
+        <h1 id="folding-title" ref={headingRef} tabIndex={-1}>한 면씩 접기</h1>
         <p className="field-error" role="alert">이 예측한 순서로는 접기 단계를 만들 수 없습니다.</p>
         <PrimaryAction
           actionId="return-to-prediction"
@@ -109,7 +111,7 @@ export function FoldingScreen({
       data-validation-reason={validation?.reason ?? 'not-provided'}
     >
       <p className="eyebrow">접기실 · 2D 관계 보기</p>
-      <h1 id="folding-title">한 면씩 접기</h1>
+      <h1 id="folding-title" ref={headingRef} tabIndex={-1}>한 면씩 접기</h1>
       <p className="folding-intro">예측한 접는 순서를 따라 면과 모서리의 관계를 확인해 보세요.</p>
       <p className="model-note" id="folding-model-boundary">
         이 가상 접기는 면의 연결 관계를 보여 주는 기하 모형이며 실제 종이의 두께·휘어짐·포장 강도·안전성을 보장하지 않습니다.

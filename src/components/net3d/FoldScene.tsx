@@ -49,7 +49,7 @@ function CameraController({
   const { camera, invalidate } = useThree();
   useLayoutEffect(() => {
     const baseFace = faces.find((face) => face.id === baseFaceId) ?? faces[0];
-    const pose = buildCameraPose(view, baseFace);
+    const pose = buildCameraPose(view, baseFace, faces);
     applyCameraPose(camera, pose, invalidate);
   }, [baseFaceId, camera, faces, invalidate, view]);
   return null;

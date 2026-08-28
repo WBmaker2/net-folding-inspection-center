@@ -44,10 +44,10 @@ describe('evidence reducer authority', () => {
     }
   });
 
-  it('marks non-required repair as confirmed and exposes four statuses only', () => {
+  it('marks non-required repair as not applicable instead of confirmed', () => {
     const { mission, state } = ready('cube-opposite-01');
     const evidence = getAchievementEvidence(state, mission);
-    expect(evidence).toEqual({ prediction: 'confirmed', analysis: 'confirmed', repair: 'confirmed', expression: 'practicing', isComplete: false });
+    expect(evidence).toEqual({ prediction: 'confirmed', analysis: 'not-applicable', repair: 'not-applicable', expression: 'practicing', isComplete: false });
   });
 
   it('accepts generated evidence and rejects forged sentence text', () => {

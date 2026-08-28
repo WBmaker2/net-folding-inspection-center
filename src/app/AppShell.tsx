@@ -2,12 +2,21 @@ import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { UpdateHistoryDialog } from '../components/common/UpdateHistoryDialog';
 
-interface AppShellProps {
+export interface AppStageMeta {
+  readonly current: number;
+  readonly total: number;
+  readonly label: string;
+  readonly canReselect: boolean;
+}
+
+export interface AppShellProps {
   readonly children: ReactNode;
   readonly storageOptIn: boolean;
   readonly onStorageOptInChange: (enabled: boolean) => void;
   readonly restoredFromStore?: boolean;
   readonly persistenceNotice?: string | null;
+  readonly stageMeta?: AppStageMeta;
+  readonly onReselectMission?: () => void;
 }
 
 export function AppShell({
@@ -16,6 +25,8 @@ export function AppShell({
   onStorageOptInChange,
   restoredFromStore = false,
   persistenceNotice = null,
+  stageMeta,
+  onReselectMission,
 }: AppShellProps): React.JSX.Element {
   const [historyOpen, setHistoryOpen] = useState(false);
   return (
@@ -25,7 +36,19 @@ export function AppShell({
           <span className="service-mark" aria-hidden="true">
             ◇
           </span>
-          <p className="service-label">전개도 포장 검수소</p>
+          <div className="header-meta">
+            <p className="service-label">전개도 포장 검수소</p>
+            {stageMeta !== undefined && (
+              <p className="stage-progress" aria-label="학습 진행">
+                {stageMeta.current} / {stageMeta.total} · {stageMeta.label}
+              </p>
+            )}
+          </div>
+          {stageMeta?.canReselect && onReselectMission !== undefined && (
+            <button type="button" className="reselect-mission-button" onClick={onReselectMission}>
+              미션 다시 고르기
+            </button>
+          )}
         </div>
       </header>
       <main id="main-content" className="shell-width main-content">

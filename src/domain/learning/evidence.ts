@@ -111,6 +111,68 @@ export const canonicalEvidenceTermsFor = (
   mission: MissionDefinition,
 ): readonly [GeometryTerm, GeometryTerm] => CANONICAL_EVIDENCE_TERMS[mission.id];
 
+export interface EvidenceTermOptions {
+  readonly relationship: readonly GeometryTerm[];
+  readonly path: readonly GeometryTerm[];
+}
+
+const EVIDENCE_ROLE_ALTERNATES: Readonly<Record<MissionId, readonly [GeometryTerm, GeometryTerm]>> = {
+  'cube-track-01': ['면', '모서리'],
+  'cube-track-02': ['면', '모서리'],
+  'cube-opposite-01': ['면', '모서리'],
+  'cube-opposite-02': ['면', '접는 방향'],
+  'cube-collision-01': ['빈 면', '모서리'],
+  'cube-collision-02': ['빈 면', '모서리'],
+  'cube-repair-01': ['모서리', '빈 면'],
+  'cube-repair-02': ['면', '모서리'],
+};
+
+/**
+ * Keeps the two selects focused on their sentence role while retaining one
+ * meaningful distractor for explanation practice.
+ */
+export const getEvidenceTermOptions = (
+  mission: MissionDefinition,
+): EvidenceTermOptions => {
+  const [relationship, path] = canonicalEvidenceTermsFor(mission);
+  const [relationshipAlternate, pathAlternate] = EVIDENCE_ROLE_ALTERNATES[mission.id];
+  const optionsFor = (primary: GeometryTerm, alternate: GeometryTerm): readonly GeometryTerm[] => (
+    Object.freeze([
+      primary,
+      ...(alternate !== primary && mission.targetVocabulary.includes(alternate) ? [alternate] : []),
+    ])
+  );
+  return Object.freeze({
+    relationship: optionsFor(relationship, relationshipAlternate),
+    path: optionsFor(path, pathAlternate),
+  });
+};
+
+type KoreanParticle = '과' | '와' | '이' | '가' | '을' | '를' | '은' | '는';
+
+const TERM_PARTICLES: Readonly<Record<GeometryTerm, Readonly<Record<KoreanParticle, KoreanParticle>>>> = {
+  '맞은편': { 과: '과', 와: '과', 이: '이', 가: '이', 을: '을', 를: '을', 은: '은', 는: '은' },
+  '모서리': { 과: '와', 와: '와', 이: '가', 가: '가', 을: '를', 를: '를', 은: '는', 는: '는' },
+  '면': { 과: '과', 와: '과', 이: '이', 가: '이', 을: '을', 를: '을', 은: '은', 는: '은' },
+  '접는 방향': { 과: '과', 와: '과', 이: '이', 가: '이', 을: '을', 를: '을', 은: '은', 는: '은' },
+  '겹침': { 과: '과', 와: '과', 이: '이', 가: '이', 을: '을', 를: '을', 은: '은', 는: '은' },
+  '빈 면': { 과: '과', 와: '과', 이: '이', 가: '이', 을: '을', 를: '을', 은: '은', 는: '은' },
+};
+
+const applyKoreanParticles = (sentence: string): string => {
+  let normalized = sentence;
+  const terms = (Object.keys(TERM_PARTICLES) as GeometryTerm[]).sort((left, right) => right.length - left.length);
+  for (const term of terms) {
+    const replacements = TERM_PARTICLES[term];
+    for (const particle of Object.keys(replacements) as KoreanParticle[]) {
+      normalized = normalized
+        .split(`${term}${particle}`)
+        .join(`${term}${replacements[particle]}`);
+    }
+  }
+  return normalized;
+};
+
 const faceText = (faceId: FaceId): string => `${Number(faceId.slice(1))}번 면`;
 const samePair = (left: OppositePair, right: OppositePair): boolean => (
   (left.a === right.a && left.b === right.b)
@@ -180,9 +242,9 @@ export function buildEvidenceSentence(
     if (replacement === undefined) return null;
     sentence = sentence.split(`{${token}}`).join(replacement);
   }
-  // Face labels end in the consonant sound "면". Normalize neutral catalog
-  // particles so each generated sentence reads naturally in Korean.
-  sentence = sentence.replace(/면와/gu, '면과').replace(/면는/gu, '면은').replace(/면가/gu, '면이').replace(/면를/gu, '면을');
+  // Normalize particles for face labels and geometry terms so generated
+  // sentences stay natural when a learner tries a distractor.
+  sentence = applyKoreanParticles(sentence);
   return /\{[^{}]+\}/u.test(sentence) ? null : sentence;
 }
 

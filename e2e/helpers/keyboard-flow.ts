@@ -79,7 +79,7 @@ export async function completeCollisionWithKeyboard(page: Page): Promise<void> {
   await page.keyboard.press('Space');
   await tabUntil(page, face(page, 6));
   await page.keyboard.press('Space');
-  const plusX = page.getByRole('radio', { name: '+x 방향' });
+  const plusX = page.getByRole('radio', { name: '오른쪽 방향' });
   await tabUntil(page, plusX);
   await page.keyboard.press('Space');
   const diagnosisSubmit = page.getByRole('button', { name: '진단 확인' });
@@ -105,10 +105,10 @@ export async function completeCollisionWithKeyboard(page: Page): Promise<void> {
   const path = page.locator('#evidence-term-path');
   await tabUntil(page, relationship);
   await expect(relationship).toBeFocused();
-  for (let index = 0; index < 4; index += 1) await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
   await tabUntil(page, path);
   await expect(path).toBeFocused();
-  for (let index = 0; index < 2; index += 1) await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
   const evidenceSubmit = page.getByRole('button', { name: '근거 확인' });
   await expect(evidenceSubmit).toBeEnabled();
   await tabUntil(page, evidenceSubmit);

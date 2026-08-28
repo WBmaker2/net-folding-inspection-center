@@ -170,7 +170,7 @@ export interface EvidenceAttempt extends EvidenceSubmission {
   readonly repairAttemptIndex?: number;
 }
 
-export type AchievementStatus = 'confirmed' | 'practicing';
+export type AchievementStatus = 'confirmed' | 'practicing' | 'not-applicable';
 
 export interface AchievementEvidence {
   readonly prediction: AchievementStatus;

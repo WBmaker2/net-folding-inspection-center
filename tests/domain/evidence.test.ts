@@ -4,6 +4,7 @@ import {
   buildEvidenceSentence,
   CANONICAL_EVIDENCE_TERMS,
   evaluateEvidenceSubmission,
+  getEvidenceTermOptions,
   getEvidenceContext,
   normalizeEvidenceSubmission,
 } from '../../src/domain/learning/evidence';
@@ -30,6 +31,23 @@ describe('evidence sentence authority', () => {
     expect(buildEvidenceSentence(mission, {
       firstFace: 'F1', secondFace: 'F3', term1: '접는 방향', term2: '맞은편',
     })).toBe('1번 면과 3번 면은 접는 방향을 따라가면 서로 맞은편이 됩니다.');
+  });
+
+  it('keeps evidence word roles narrow and fixes Korean particles', () => {
+    const mission = loadMissionCatalog().find((item) => item.id === 'cube-collision-01')!;
+    expect(getEvidenceTermOptions(mission)).toEqual({
+      relationship: ['겹침', '빈 면'],
+      path: ['면', '모서리'],
+    });
+    const sentence = buildEvidenceSentence(mission, {
+      firstFace: 'F2',
+      secondFace: 'F6',
+      term1: '모서리',
+      term2: '빈 면',
+    });
+    expect(sentence).toContain('모서리를');
+    expect(sentence).toContain('빈 면이');
+    expect(sentence).not.toContain('모서리을');
   });
 
   it('rejects unresolved and arbitrary values', () => {

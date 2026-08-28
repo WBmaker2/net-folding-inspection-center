@@ -4,6 +4,7 @@ import { evaluateEvidenceSubmission } from '../domain/learning/evidence';
 import { evaluateDiagnosis } from '../domain/learning/diagnosis';
 import type {
   AchievementEvidence,
+  AchievementStatus,
   EvidenceSubmission,
   LearningAttempts,
   LearningState,
@@ -12,6 +13,7 @@ import type {
   DiagnosisSubmission,
   RepairSubmission,
 } from '../domain/learning/types';
+import { directionLabel } from '../domain/net/directionLabels';
 import { validateCubeNet } from '../domain/net/validateCubeNet';
 import { useFocusHeading } from '../hooks/useFocusHeading';
 import { PrimaryAction } from '../components/common/PrimaryAction';
@@ -30,15 +32,17 @@ export interface CompletionScreenProps {
   readonly criticalActionId?: CriticalActionId;
 }
 
-const statusText = (value: AchievementEvidence[keyof AchievementEvidence]): string => (
-  value === 'confirmed' ? '확인함' : '연습 중'
-);
+const statusText = (value: AchievementStatus): string => {
+  if (value === 'confirmed') return '확인함';
+  if (value === 'not-applicable') return '이번 미션에는 없음';
+  return '연습 중';
+};
 
 const pairText = (pair: { readonly a: string; readonly b: string } | undefined): string => (
   pair === undefined ? '아직 선택하지 않음' : `${pair.a}·${pair.b}`
 );
 const diagnosisText = (value: DiagnosisSubmission | undefined): string => (
-  value === undefined ? '아직 시도하지 않음' : `${value.selectedErrorType} · ${value.selectedFaceIds.join('·') || '면 없음'}${value.selectedMissingDirection === undefined ? '' : ` · 비어 있는 방향: ${value.selectedMissingDirection}`}`
+  value === undefined ? '아직 시도하지 않음' : `${value.selectedErrorType} · ${value.selectedFaceIds.join('·') || '면 없음'}${value.selectedMissingDirection === undefined ? '' : ` · 비어 있는 방향: ${directionLabel(value.selectedMissingDirection)}`}`
 );
 const repairText = (value: RepairSubmission | undefined): string => (
   value === undefined ? '아직 시도하지 않음' : `${value.faceId} → (${value.target.x}, ${value.target.y})${value.accepted ? ' · 수용됨' : ' · 다시 살펴봄'}`
@@ -46,6 +50,20 @@ const repairText = (value: RepairSubmission | undefined): string => (
 const evidenceText = (value: EvidenceSubmission | undefined): string => (
   value === undefined ? '아직 시도하지 않음' : `${pairText(value.oppositePair)} · ${value.selectedTerms.join(' · ')}`
 );
+
+const learningTakeaway = (mission: MissionDefinition): string => {
+  if (mission.kind === 'tracking') return '접은 뒤 무늬 방향이 같은지 비교하는 법을 배웠어요.';
+  if (mission.kind === 'opposite') return '모서리를 따라 접어 맞은편 면을 찾는 법을 배웠어요.';
+  if (mission.kind === 'repair') return '겹친 면을 한 칸 옮겨 다시 확인하는 법을 배웠어요.';
+  return '두 면이 같은 자리에 겹치는지 살펴보는 법을 배웠어요.';
+};
+
+const nextStepText = (mission: MissionDefinition): string => {
+  if (mission.kind === 'tracking') return '다음에는 무늬가 향하는 방향을 한 번 더 확인해 보세요.';
+  if (mission.kind === 'opposite') return '다음에는 다른 면을 기준으로도 맞은편을 찾아 보세요.';
+  if (mission.kind === 'repair') return '다음에는 옮긴 면이 빈 자리를 채우는지 다시 살펴보세요.';
+  return '다음에는 면을 한 칸씩 옮겨 다시 확인해 보세요.';
+};
 
 export function CompletionScreen({
   mission,
@@ -126,9 +144,17 @@ export function CompletionScreen({
         {evidence.isComplete ? '필요한 근거를 모두 확인했습니다.' : '일부 근거는 연습 중입니다.'}
       </p>
 
+      <section className="learning-summary" aria-label="배운 점과 다음에는">
+        <h2>배운 점</h2>
+        <p className="learning-takeaway">{learningTakeaway(mission)}</p>
+        <h2>다음에는</h2>
+        <p className="next-step">{nextStepText(mission)}</p>
+      </section>
+
       <section className="completion-comparison" aria-labelledby="comparison-title">
         <h2 id="comparison-title">처음 생각과 마지막 확인 비교</h2>
-        <table>
+        <p className="comparison-hint" role="note">작은 화면에서는 글이 칸 안에서 줄바꿈됩니다.</p>
+        <table className="comparison-table">
           <caption>수정 전후 학습 기록</caption>
           <thead><tr><th scope="col">확인 항목</th><th scope="col">처음 또는 첫 오답</th><th scope="col">마지막 기록</th></tr></thead>
           <tbody>

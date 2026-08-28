@@ -71,17 +71,17 @@ export const getAchievementEvidence = (
   const predictionConfirmed = state.prediction !== null
     && actualTopFaceId !== undefined
     && state.prediction.predictedTopFaceId === actualTopFaceId;
-  const analysisConfirmed = mission.kind === 'opposite'
-    ? true
-    : state.diagnosis !== null
-      && evaluateDiagnosis(mission, state.diagnosis, baseFaceId).isCorrect;
-  const repairConfirmed = mission.kind !== 'collision' && mission.kind !== 'repair'
-    ? true
-    : state.repair !== null && evaluateRepair(
+  const analysisRequired = mission.kind !== 'opposite';
+  const analysisConfirmed = !analysisRequired
+    || (state.diagnosis !== null
+      && evaluateDiagnosis(mission, state.diagnosis, baseFaceId).isCorrect);
+  const repairRequired = mission.kind === 'collision' || mission.kind === 'repair';
+  const repairConfirmed = !repairRequired
+    || (state.repair !== null && evaluateRepair(
       mission.net,
       state.repair.candidate,
       baseFaceId,
-    ).accepted && state.repair.accepted === true;
+    ).accepted && state.repair.accepted === true);
   const expressionConfirmed = state.evidence !== null && evaluateEvidenceSubmission(
     mission,
     state.evidence,
@@ -93,8 +93,8 @@ export const getAchievementEvidence = (
   ).isCorrect;
   const evidence: AchievementEvidence = {
     prediction: status(predictionConfirmed),
-    analysis: status(analysisConfirmed),
-    repair: status(repairConfirmed),
+    analysis: analysisRequired ? status(analysisConfirmed) : 'not-applicable',
+    repair: repairRequired ? status(repairConfirmed) : 'not-applicable',
     expression: status(expressionConfirmed),
     isComplete: predictionConfirmed && analysisConfirmed && repairConfirmed && expressionConfirmed,
   };

@@ -31,8 +31,8 @@ describe('CompletionScreen', () => {
       completedMissionIds: [mission.id],
     };
     render(<CompletionScreen mission={mission} state={state} />);
-    expect(screen.getByRole('table', { name: '수정 전후 학습 기록' })).toHaveTextContent('비어 있는 방향: -x');
-    expect(screen.getByRole('table', { name: '수정 전후 학습 기록' })).toHaveTextContent('비어 있는 방향: +x');
+    expect(screen.getByRole('table', { name: '수정 전후 학습 기록' })).toHaveTextContent('비어 있는 방향: 왼쪽 방향');
+    expect(screen.getByRole('table', { name: '수정 전후 학습 기록' })).toHaveTextContent('비어 있는 방향: 오른쪽 방향');
     expect(screen.getByRole('table', { name: '수정 전후 학습 기록' })).not.toHaveTextContent('undefined');
   });
 
@@ -64,5 +64,38 @@ describe('CompletionScreen', () => {
     render(<CompletionScreen mission={mission} state={state} />);
     const comparison = screen.getByRole('table', { name: '수정 전후 학습 기록' });
     expect(within(comparison).getByRole('row', { name: /예측.*F2.*F3/u })).toBeVisible();
+  });
+
+  it('labels activities that do not belong to the mission', () => {
+    const mission = getMissionById('cube-opposite-01');
+    const state: LearningState = {
+      missionId: mission.id,
+      stage: 'complete',
+      prediction: null,
+      foldStepIndex: 5,
+      diagnosis: null,
+      repair: null,
+      evidence: null,
+      attempts: { predictions: [], diagnoses: [], repairs: [], evidence: [] },
+      storageOptIn: false,
+      completedMissionIds: [mission.id],
+    };
+    render(<CompletionScreen mission={mission} state={state} />);
+    const achievementTable = screen.getByRole('table', { name: '기하 학습 성취 상태' });
+    expect(within(achievementTable).getByRole('row', { name: /수리/u })).toHaveTextContent('이번 미션에는 없음');
+    expect(within(achievementTable).getByRole('row', { name: /분석/u })).toHaveTextContent('이번 미션에는 없음');
+    expect(within(achievementTable).getByRole('row', { name: /수리/u })).not.toHaveTextContent('확인함');
+  });
+
+  it('shows a plain-language takeaway, next step, and mobile comparison hint', () => {
+    const mission = getMissionById('cube-collision-01');
+    render(<CompletionScreen mission={mission} />);
+
+    expect(screen.getByRole('heading', { name: '배운 점' })).toBeVisible();
+    expect(screen.getByText('두 면이 같은 자리에 겹치는지 살펴보는 법을 배웠어요.')).toBeVisible();
+    expect(screen.getByRole('heading', { name: '다음에는' })).toBeVisible();
+    expect(screen.getByText('다음에는 면을 한 칸씩 옮겨 다시 확인해 보세요.')).toBeVisible();
+    expect(screen.getByText('작은 화면에서는 글이 칸 안에서 줄바꿈됩니다.')).toBeVisible();
+    expect(screen.getByRole('table', { name: '수정 전후 학습 기록' })).toHaveClass('comparison-table');
   });
 });

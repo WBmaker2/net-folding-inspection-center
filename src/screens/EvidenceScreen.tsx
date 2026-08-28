@@ -3,6 +3,7 @@ import { faceNumber } from '../components/net2d/faceLabels';
 import {
   buildEvidenceSentence,
   evaluateEvidenceSubmission,
+  getEvidenceTermOptions,
   getEvidenceContext,
 } from '../domain/learning/evidence';
 import type {
@@ -33,8 +34,6 @@ export interface EvidenceScreenProps {
   readonly onCompleteMission?: () => void;
   readonly criticalActionId?: CriticalActionId;
 }
-
-const terms: readonly GeometryTerm[] = ['맞은편', '모서리', '면', '접는 방향', '겹침', '빈 면'];
 
 export function EvidenceScreen({
   mission,
@@ -68,7 +67,7 @@ export function EvidenceScreen({
     }
     return context.pairCandidates;
   }, [context.collisionPair, context.pairCandidates, mission.kind]);
-  const termOptions = terms.filter((term) => mission.targetVocabulary.includes(term));
+  const termOptions = useMemo(() => getEvidenceTermOptions(mission), [mission]);
   const updateTerm = (setter: (term: GeometryTerm | '') => void, value: GeometryTerm | ''): void => {
     setter(value);
     setSubmitted(null);
@@ -78,18 +77,19 @@ export function EvidenceScreen({
   const handleTermKeyDown = (
     event: React.KeyboardEvent<HTMLSelectElement>,
     current: GeometryTerm | '',
+    options: readonly GeometryTerm[],
     setter: (term: GeometryTerm | '') => void,
   ): void => {
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey
       || (event.key !== 'ArrowDown' && event.key !== 'ArrowUp')) return;
     event.preventDefault();
-    const currentIndex = current === '' ? -1 : termOptions.indexOf(current);
+    const currentIndex = current === '' ? -1 : options.indexOf(current);
     const nextIndex = Math.max(-1, Math.min(
-      termOptions.length - 1,
+      options.length - 1,
       currentIndex + (event.key === 'ArrowDown' ? 1 : -1),
     ));
     if (nextIndex === currentIndex) return;
-    updateTerm(setter, nextIndex < 0 ? '' : termOptions[nextIndex]!);
+    updateTerm(setter, nextIndex < 0 ? '' : options[nextIndex]!);
   };
   const selectedPair = selectedFaces.length === 2
     ? pairOptions.find((pair) => (
@@ -192,27 +192,28 @@ export function EvidenceScreen({
 
       <fieldset className="evidence-fieldset">
         <legend>2. 관계나 결과 낱말을 골라 보세요</legend>
-        <label htmlFor="evidence-term-relationship">첫 번째 기하 낱말</label>
+        <p className="field-help">첫 번째는 면의 관계, 두 번째는 그 관계를 찾은 까닭을 나타냅니다.</p>
+        <label htmlFor="evidence-term-relationship">관계를 나타내는 낱말</label>
         <select
           id="evidence-term-relationship"
           value={relationshipTerm}
-          onKeyDown={(event) => handleTermKeyDown(event, relationshipTerm, setRelationshipTerm)}
+          onKeyDown={(event) => handleTermKeyDown(event, relationshipTerm, termOptions.relationship, setRelationshipTerm)}
           onChange={(event) => updateTerm(setRelationshipTerm, event.target.value as GeometryTerm)}
         >
           <option value="">고르기</option>
-          {termOptions.map((term) => (
+          {termOptions.relationship.map((term) => (
             <option value={term} key={term}>{term}</option>
           ))}
         </select>
-        <label htmlFor="evidence-term-path">두 번째 기하 낱말</label>
+        <label htmlFor="evidence-term-path">까닭을 나타내는 낱말</label>
         <select
           id="evidence-term-path"
           value={pathTerm}
-          onKeyDown={(event) => handleTermKeyDown(event, pathTerm, setPathTerm)}
+          onKeyDown={(event) => handleTermKeyDown(event, pathTerm, termOptions.path, setPathTerm)}
           onChange={(event) => updateTerm(setPathTerm, event.target.value as GeometryTerm)}
         >
           <option value="">고르기</option>
-          {termOptions.map((term) => (
+          {termOptions.path.map((term) => (
             <option value={term} key={term}>{term}</option>
           ))}
         </select>

@@ -36,6 +36,12 @@ const predictionFor = (missionId: Parameters<typeof getMissionById>[0]): Predict
 };
 
 describe('FoldingScreen', () => {
+  it('moves focus to the folding heading when the stage opens', () => {
+    renderFolding();
+
+    expect(screen.getByRole('heading', { name: '한 면씩 접기' })).toHaveFocus();
+  });
+
   it('reveals one fold at a time and keeps previous/next at the boundaries', async () => {
     const user = userEvent.setup();
     renderFolding();

@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { AppShell } from './app/AppShell';
+import type { AppStageMeta } from './app/AppShell';
 import { useLearningController } from './app/useLearningController';
 import { loadMissionCatalog } from './content/missions/catalog';
 import { evaluateDecorationOrientation } from './domain/net/decoration';
@@ -11,7 +12,20 @@ import { IntakeScreen } from './screens/IntakeScreen';
 import { PredictionScreen } from './screens/PredictionScreen';
 import { RepairScreen } from './screens/RepairScreen';
 import { getCriticalActionId } from './domain/learning/selectors';
-import type { FaceId } from './domain/net/types';
+import type { FaceId, LearningStage } from './domain/net/types';
+
+function getStageMeta(stage: LearningStage): AppStageMeta {
+  const stageMeta: Readonly<Record<LearningStage, AppStageMeta>> = {
+    intake: { current: 1, total: 6, label: '미션 고르기', canReselect: false },
+    prediction: { current: 2, total: 6, label: '예측', canReselect: true },
+    folding: { current: 3, total: 6, label: '접기', canReselect: true },
+    diagnosis: { current: 4, total: 6, label: '진단', canReselect: true },
+    repair: { current: 5, total: 6, label: '수리', canReselect: true },
+    evidence: { current: 6, total: 6, label: '근거', canReselect: true },
+    complete: { current: 6, total: 6, label: '완료', canReselect: true },
+  };
+  return stageMeta[stage];
+}
 
 export function App(): React.JSX.Element {
   const controller = useLearningController();
@@ -159,6 +173,8 @@ export function App(): React.JSX.Element {
       storageOptIn={state.storageOptIn}
       restoredFromStore={controller.restoredFromStore}
       persistenceNotice={controller.persistenceNotice}
+      stageMeta={getStageMeta(state.stage)}
+      onReselectMission={state.stage === 'intake' ? undefined : controller.resetMission}
       onStorageOptInChange={(enabled) => controller.dispatch({
         type: 'SET_STORAGE_OPT_IN',
         enabled,

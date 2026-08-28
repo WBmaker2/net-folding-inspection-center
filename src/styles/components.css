@@ -97,6 +97,15 @@
   cursor: pointer;
 }
 
+/* Keep the history control in the footer on wide screens too, so 200% text
+   zoom cannot cover a learner's pulsing action near the viewport edge. */
+@media (min-width: 521px) {
+  .update-history-trigger {
+    position: static;
+    align-self: center;
+  }
+}
+
 @media (max-width: 375px) {
   .main-content {
     place-items: stretch;
