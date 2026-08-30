@@ -24,7 +24,16 @@ export interface RepairScreenProps {
   readonly criticalActionId?: CriticalActionId;
 }
 
-const pointText = (point: GridPoint): string => `(${point.x}, ${point.y})`;
+const moveDirectionText = (from: GridPoint, to: GridPoint): string => {
+  const horizontal = to.x > from.x ? '오른쪽' : to.x < from.x ? '왼쪽' : '';
+  const vertical = to.y > from.y ? '아래쪽' : to.y < from.y ? '위쪽' : '';
+  return [vertical, horizontal].filter(Boolean).join(' ') || '같은 자리';
+};
+
+const faceLabel = (net: NetDefinition, faceId: FaceId): string => {
+  const face = net.faces.find((candidate) => candidate.id === faceId) ?? net.faces[0]!;
+  return `${faceNumber(face)}번 면`;
+};
 
 const reasonText = (evaluation: RepairEvaluation): string => {
   if (!evaluation.isSingleFaceMove) return '한 면의 위치만 바꾸어야 합니다. 다른 정보는 그대로 두세요.';
@@ -96,7 +105,10 @@ function RepairScreenContent({
     setEvaluation(nextEvaluation);
     setCandidateNet(moveFace(decorationPreviewNet, selectedFaceId, nextTarget));
     setCallbackError(false);
-    setStatus(`미리보기: ${pointText(nextTarget)}로 옮겼을 때의 결과를 확인하세요.`);
+    const selectedFace = repairNet.faces.find((face) => face.id === selectedFaceId);
+    if (selectedFace !== undefined) {
+      setStatus(`미리보기: ${moveDirectionText(selectedFace.grid, nextTarget)} 빈 칸으로 옮겼을 때의 결과를 확인하세요.`);
+    }
   };
 
   const confirm = (): void => {
@@ -124,7 +136,7 @@ function RepairScreenContent({
     setDecorationPreviewNet(rotated);
     if (target !== null) setCandidateNet(moveFace(rotated, selectedFaceId, target));
     onRotateDecoration?.(selectedFaceId, rotated);
-    setStatus('장식 방향만 한 번 돌렸습니다. 장식 회전은 좌표 수리와 별도로 확인합니다.');
+    setStatus('장식 방향만 한 번 돌렸습니다. 장식 회전은 면 자리 수리와 별도로 확인합니다.');
   };
 
   return (
@@ -187,10 +199,11 @@ function RepairScreenContent({
         <div className="repair-preview" aria-live="polite">
           <h2>수리 미리보기</h2>
           <dl className="repair-coordinate-list">
-            <div><dt>선택한 면</dt><dd>{faceNumber(repairNet.faces.find((face) => face.id === selectedFaceId)!)}번</dd></div>
-            <div><dt>원본 위치</dt><dd>{pointText(repairNet.faces.find((face) => face.id === selectedFaceId)!.grid)}</dd></div>
-            <div><dt>현재 위치</dt><dd>{pointText(target)}</dd></div>
-            <div><dt>바뀐 면</dt><dd>{evaluation.changedFaceIds.length === 0 ? '없음' : evaluation.changedFaceIds.join(', ')}</dd></div>
+            <div><dt>옮길 면</dt><dd>{faceLabel(repairNet, selectedFaceId)}</dd></div>
+            <div><dt>옮길 곳</dt><dd>{moveDirectionText(repairNet.faces.find((face) => face.id === selectedFaceId)!.grid, target)} 빈 칸</dd></div>
+            <div><dt>바뀐 내용</dt><dd>{evaluation.changedFaceIds.length === 0
+              ? '면 위치가 바뀌지 않음'
+              : `${evaluation.changedFaceIds.map((faceId) => faceLabel(repairNet, faceId)).join(', ')}의 자리`}</dd></div>
           </dl>
           <p className={evaluation.accepted ? 'repair-valid-reason' : 'repair-invalid-reason'}>
             {reasonText(evaluation)}

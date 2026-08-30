@@ -12,6 +12,7 @@
   border: 1px solid var(--line);
   border-radius: 1rem;
   background: var(--surface);
+  box-shadow: var(--shadow-soft);
 }
 
 .evidence-face-options {
@@ -39,7 +40,7 @@
 .evidence-submit:not(:disabled),
 .evidence-complete {
   border-color: var(--accent);
-  background: var(--accent-soft, #e2f2f3);
+  background: var(--accent-soft);
 }
 
 .evidence-fieldset label,
@@ -65,6 +66,23 @@
 .evidence-submit,
 .evidence-complete {
   margin: 0.35rem 0.4rem 0.35rem 0;
+}
+
+.evidence-submit.primary-action:not(:disabled),
+.evidence-complete.primary-action,
+.completion-actions button.primary-action {
+  border-color: var(--accent);
+  color: #fff;
+  background: var(--accent);
+  box-shadow: 0 0.35rem 0.8rem rgb(20 125 161 / 15%);
+  font-weight: 900;
+}
+
+.evidence-submit.primary-action:hover:not(:disabled),
+.evidence-complete.primary-action:hover:not(:disabled),
+.completion-actions button.primary-action:hover:not(:disabled) {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
 }
 
 .evidence-submit:disabled {
@@ -114,9 +132,21 @@
   margin: 1.25rem 0;
   padding: 1rem;
   border: 1px solid var(--line);
-  border-left: 0.35rem solid var(--accent);
+  border-top: 0.35rem solid var(--accent);
   border-radius: 1rem;
   background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.completion-status {
+  margin: 1rem 0;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  border-top: 0.3rem solid var(--success);
+  border-radius: 0.65rem;
+  color: var(--success);
+  background: var(--success-soft);
+  font-weight: 800;
 }
 
 .learning-summary h2 {
@@ -139,6 +169,10 @@
   margin-top: 1rem;
 }
 
+.completion-actions button {
+  min-width: 9rem;
+}
+
 @media (max-width: 520px) {
   .evidence-face-options {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -146,6 +180,15 @@
 
   .completion-comparison {
     padding: 0.75rem;
+  }
+
+  .completion-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .completion-actions button {
+    width: 100%;
   }
 
   .comparison-table th,

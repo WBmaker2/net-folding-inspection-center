@@ -1,0 +1,137 @@
+.diagnosis-screen {
+  width: min(100%, 58rem);
+}
+
+.diagnosis-intro {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.diagnosis-feedback {
+  margin-block: 1rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  border-top: 0.3rem solid var(--success);
+  border-radius: 0.65rem;
+  background: var(--success-soft);
+  font-weight: 800;
+}
+
+.diagnosis-validation-panel,
+.diagnosis-decoration-panel,
+.diagnosis-collision-visual,
+.diagnosis-fieldset {
+  margin-block: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.diagnosis-validation-panel h2,
+.diagnosis-decoration-panel h2,
+.diagnosis-collision-visual h2,
+.diagnosis-fieldset legend {
+  font-weight: 900;
+}
+
+.diagnosis-validation-panel h2 {
+  margin-top: 0;
+  font-size: 1.05rem;
+}
+
+.diagnosis-decoration-panel h2,
+.diagnosis-collision-visual h2 {
+  margin-top: 0;
+  font-size: 1.05rem;
+}
+
+.diagnosis-face-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.diagnosis-face-chip {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  padding: 0.55rem 0.8rem;
+  border: 3px solid var(--accent);
+  border-radius: 999px;
+  font-weight: 900;
+}
+
+.diagnosis-missing-axis {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0;
+  padding: 0.7rem;
+  border: 3px dashed var(--accent);
+  border-radius: 0.6rem;
+  font-weight: 900;
+}
+
+.diagnosis-missing-axis span {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.diagnosis-radio-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  margin-block: 0.25rem;
+}
+
+.diagnosis-face-options,
+.diagnosis-axis-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.diagnosis-face-button,
+.diagnosis-submit,
+.diagnosis-review-button {
+  min-height: 2.75rem;
+  padding: 0.55rem 0.8rem;
+  border: 2px solid var(--line);
+  border-radius: 0.6rem;
+  color: var(--ink);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.diagnosis-face-button.is-selected,
+.diagnosis-face-button:focus-visible {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.diagnosis-face-button:disabled,
+.diagnosis-submit:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.diagnosis-submit {
+  width: 100%;
+  margin-top: 1rem;
+  border-color: var(--accent);
+  color: #fff;
+  background: var(--accent);
+  font-weight: 900;
+}
+
+.diagnosis-submit:disabled {
+  color: var(--muted-ink);
+  background: var(--line);
+}
+
+.diagnosis-review-button {
+  margin-top: 0.75rem;
+}
