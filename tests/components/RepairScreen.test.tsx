@@ -6,6 +6,12 @@ import { RepairScreen } from '../../src/screens/RepairScreen';
 
 const mission = getMissionById('cube-repair-01');
 
+const targetAt = (x: number, y: number): HTMLElement => {
+  const target = document.querySelector(`button[data-grid-x="${x}"][data-grid-y="${y}"]`);
+  if (!(target instanceof HTMLElement)) throw new Error(`missing target ${x},${y}`);
+  return target;
+};
+
 describe('RepairScreen', () => {
   afterEach(() => cleanup());
   it('selects a face and target, previews immutably, confirms without drag handlers', async () => {
@@ -14,7 +20,7 @@ describe('RepairScreen', () => {
     const { container } = render(<RepairScreen mission={mission} onSubmit={onSubmit} />);
 
     await user.click(screen.getByRole('button', { name: /6번 면/ }));
-    const target = screen.getByRole('button', { name: /빈 칸.*2.*1/ });
+    const target = targetAt(2, 1);
     await user.click(target);
     expect(screen.getByRole('heading', { name: '수리 미리보기' })).toBeVisible();
     expect(screen.getByText('옮길 면').parentElement).toHaveTextContent('6번 면');
@@ -23,6 +29,8 @@ describe('RepairScreen', () => {
     expect(screen.queryByText('원본 위치')).toBeNull();
     expect(screen.queryByText('현재 위치')).toBeNull();
     expect(screen.queryByText(/F6/)).toBeNull();
+    expect(screen.queryByText(/\(-?\d+,\s*-?\d+\)/u)).toBeNull();
+    expect(target).toHaveAccessibleName('선택한 면 기준 오른쪽 빈 칸, 이동 후보');
     expect(container.querySelector('[draggable="true"]')).toBeNull();
 
     await user.click(screen.getByRole('button', { name: '수리 확인' }));
@@ -41,7 +49,7 @@ describe('RepairScreen', () => {
     const user = userEvent.setup();
     render(<RepairScreen mission={mission} onSubmit={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: /^6번 면/ }));
-    await user.click(screen.getByRole('button', { name: /빈 칸.*2.*1/ }));
+    await user.click(targetAt(2, 1));
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('heading', { name: '수리 미리보기' })).toBeNull();
     expect(screen.getByText(/면을 먼저 선택/)).toBeVisible();
@@ -52,7 +60,7 @@ describe('RepairScreen', () => {
     const onSubmit = vi.fn(() => { throw new Error('dispatch failed'); });
     render(<RepairScreen mission={mission} onSubmit={onSubmit} />);
     await user.click(screen.getByRole('button', { name: /^6번 면/ }));
-    await user.click(screen.getByRole('button', { name: /빈 칸.*2.*1/ }));
+    await user.click(targetAt(2, 1));
     await user.click(screen.getByRole('button', { name: '수리 확인' }));
     expect(onSubmit).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(/점수|성공했어요/)).toBeNull();
@@ -62,7 +70,7 @@ describe('RepairScreen', () => {
     const user = userEvent.setup();
     const { container } = render(<RepairScreen mission={mission} onSubmit={vi.fn()} />);
     await user.click(screen.getByRole('button', { name: /^6번 면/ }));
-    const target = screen.getByRole('button', { name: /빈 칸.*2.*1/ });
+    const target = targetAt(2, 1);
     expect(target.parentElement?.style.gridColumn).toBe('4');
     expect(target.parentElement?.style.gridRow).toBe('3');
     expect(container.querySelector('.repair-grid-occupied')).not.toBeNull();
@@ -91,7 +99,7 @@ describe('RepairScreen', () => {
     const onSubmit = vi.fn();
     render(<RepairScreen mission={getMissionById('cube-repair-02')} onSubmit={onSubmit} />);
     await user.click(screen.getByRole('button', { name: /^3번 면/ }));
-    await user.click(screen.getByRole('button', { name: /빈 칸.*1.*0/ }));
+    await user.click(targetAt(1, 0));
     await user.click(screen.getByRole('button', { name: '수리 확인' }));
     expect(onSubmit.mock.calls[0]?.[0]).toMatchObject({ faceId: 'F3', target: { x: 1, y: 0 }, accepted: true });
   });

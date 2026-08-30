@@ -65,6 +65,26 @@
   background: var(--surface);
 }
 
+.prediction-step[data-step-state='upcoming'] {
+  background: var(--surface-soft);
+}
+
+.prediction-step[data-step-state='upcoming'] > :not(h2):not(.prediction-step-gate):not(.prediction-order-list) {
+  display: none;
+}
+
+.prediction-step-gate {
+  margin: 0;
+  color: var(--muted-ink);
+  font-weight: 700;
+}
+
+.folding-view-help {
+  margin: 0.35rem 0 0;
+  color: var(--muted-ink);
+  font-size: 0.92rem;
+}
+
 .prediction-step h2 {
   margin-top: 0;
   font-size: 1.15rem;

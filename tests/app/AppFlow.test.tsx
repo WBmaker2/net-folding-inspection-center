@@ -12,6 +12,12 @@ const missionButton = (title: string): HTMLElement => (
   screen.getByRole('button', { name: `${title} 미션 선택` })
 );
 
+const repairTargetAt = (x: number, y: number): HTMLElement => {
+  const target = document.querySelector(`button[data-grid-x="${x}"][data-grid-y="${y}"]`);
+  if (!(target instanceof HTMLElement)) throw new Error(`missing repair target ${x},${y}`);
+  return target;
+};
+
 const choosePrediction = async (
   user: ReturnType<typeof userEvent.setup>,
   topFace: number,
@@ -169,7 +175,7 @@ describe('Task 13 integrated learner flow', () => {
     expect(screen.getByRole('heading', { name: '한 면 수리대' })).toBeVisible();
     expect(screen.queryByRole('button', { name: /장식만 한 번 돌리기/u })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^6번 면/ }));
-    await user.click(screen.getByRole('button', { name: /빈 칸 \(2, 1\)/ }));
+    await user.click(repairTargetAt(2, 1));
     expectOnePulse('수리 확인');
     await user.click(screen.getByRole('button', { name: '수리 확인' }));
     await user.click(screen.getByRole('button', { name: /^2번 면/ }));
@@ -196,7 +202,7 @@ describe('Task 13 integrated learner flow', () => {
     await user.click(screen.getByRole('button', { name: '진단 확인' }));
     expect(screen.queryByRole('button', { name: /장식만 한 번 돌리기/u })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^6번 면/ }));
-    await user.click(screen.getByRole('button', { name: /빈 칸 \(2, 1\)/ }));
+    await user.click(repairTargetAt(2, 1));
     await user.click(screen.getByRole('button', { name: '수리 확인' }));
     await user.click(screen.getByRole('button', { name: /^1번 면/ }));
     await user.click(screen.getByRole('button', { name: /^3번 면/ }));
@@ -215,7 +221,7 @@ describe('Task 13 integrated learner flow', () => {
     await user.click(screen.getByLabelText('오른쪽 방향'));
     await user.click(screen.getByRole('button', { name: '진단 확인' }));
     await user.click(screen.getByRole('button', { name: /^6번 면/ }));
-    await user.click(screen.getByRole('button', { name: /빈 칸 \(2, 1\)/ }));
+    await user.click(repairTargetAt(2, 1));
     await user.click(screen.getByRole('button', { name: '수리 확인' }));
     await user.click(screen.getByRole('button', { name: /^1번 면/ }));
     await user.click(screen.getByRole('button', { name: /^3번 면/ }));
@@ -224,7 +230,8 @@ describe('Task 13 integrated learner flow', () => {
     await user.click(screen.getByRole('button', { name: '미션 완료 확인' }));
     expect(screen.getByRole('heading', { name: '검수 완료' })).toBeVisible();
     const comparison = screen.getByRole('table', { name: '수정 전후 학습 기록' });
-    expect(within(comparison).getByRole('row', { name: /예측.*F3.*F3/u })).toBeVisible();
+    expect(within(comparison).getByRole('row', { name: /예측.*3번 면.*3번 면/u })).toBeVisible();
+    expect(comparison).not.toHaveTextContent(/\bF[1-6]\b/u);
 
     await user.click(screen.getByRole('button', { name: '다음 미션' }));
     const completedCard = screen.getByRole('heading', { name: '한 면 수리 1' }).closest('article');
@@ -233,7 +240,8 @@ describe('Task 13 integrated learner flow', () => {
     await user.click(missionButton('맞은편 면 찾기 1'));
     expect(screen.getByRole('heading', { name: '예측판' })).toBeVisible();
     expect(screen.getByText('기준면: 아직 선택하지 않음')).toBeVisible();
-    expect(screen.getByText('예상 윗면: 아직 선택하지 않음')).toBeVisible();
+    expect(screen.getByText('기준면을 고르면 이 단계가 열려요.')).toBeVisible();
+    expect(screen.getByText('예상 윗면: 아직 선택하지 않음')).not.toBeVisible();
     expect(within(screen.getByRole('list', { name: '예측한 접는 순서' })).queryAllByRole('listitem')).toHaveLength(0);
     expect(screen.queryByRole('heading', { name: '한 면 수리대' })).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '검수 완료' })).not.toBeInTheDocument();

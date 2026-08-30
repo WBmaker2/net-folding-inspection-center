@@ -52,14 +52,14 @@ export function RepairTargetGrid({
             <button
               type="button"
               className={`repair-target-cell${selected ? ' is-selected' : ''}`}
-              aria-label={`빈 칸 ${pointText(point)}, ${relativeText(selectedFace?.grid, point)}, 이동 후보`}
+              aria-label={`${relativeText(selectedFace?.grid, point)} 빈 칸, 이동 후보`}
               aria-pressed={selected}
               data-grid-x={point.x}
               data-grid-y={point.y}
               onClick={() => onTargetSelect(point)}
             >
               <span aria-hidden="true">빈 칸</span>
-              <strong aria-hidden="true">{pointText(point)}</strong>
+              <strong aria-hidden="true">{relativeText(selectedFace?.grid, point)}</strong>
             </button>
           </div>,
         );
@@ -82,8 +82,6 @@ export function RepairTargetGrid({
     </div>
   );
 }
-
-const pointText = (point: GridPoint): string => `(${point.x}, ${point.y})`;
 
 const relativeText = (from: GridPoint | undefined, to: GridPoint): string => {
   if (from === undefined) return '선택한 면과의 위치';

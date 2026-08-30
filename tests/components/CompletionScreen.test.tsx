@@ -33,7 +33,10 @@ describe('CompletionScreen', () => {
     render(<CompletionScreen mission={mission} state={state} />);
     expect(screen.getByRole('table', { name: '수정 전후 학습 기록' })).toHaveTextContent('비어 있는 방향: 왼쪽 방향');
     expect(screen.getByRole('table', { name: '수정 전후 학습 기록' })).toHaveTextContent('비어 있는 방향: 오른쪽 방향');
-    expect(screen.getByRole('table', { name: '수정 전후 학습 기록' })).not.toHaveTextContent('undefined');
+    const comparison = screen.getByRole('table', { name: '수정 전후 학습 기록' });
+    expect(comparison).not.toHaveTextContent('undefined');
+    expect(comparison).not.toHaveTextContent(/\(-?\d+,\s*-?\d+\)/u);
+    expect(comparison).toHaveTextContent('2번 면과 6번 면');
   });
 
   it('compares the first prediction with the corrected current prediction', () => {
@@ -63,7 +66,8 @@ describe('CompletionScreen', () => {
     };
     render(<CompletionScreen mission={mission} state={state} />);
     const comparison = screen.getByRole('table', { name: '수정 전후 학습 기록' });
-    expect(within(comparison).getByRole('row', { name: /예측.*F2.*F3/u })).toBeVisible();
+    expect(within(comparison).getByRole('row', { name: /예측.*2번 면.*3번 면/u })).toBeVisible();
+    expect(comparison).not.toHaveTextContent(/\bF[1-6]\b/u);
   });
 
   it('labels activities that do not belong to the mission', () => {

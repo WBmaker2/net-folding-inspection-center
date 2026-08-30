@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { faceNumber } from '../components/net2d/faceLabels';
+import { faceIdLabel, faceNumber } from '../components/net2d/faceLabels';
 import {
   buildEvidenceSentence,
   evaluateEvidenceSubmission,
@@ -255,7 +255,9 @@ export function EvidenceScreen({
       {completed && <p className="field-success" role="status">미션 완료를 기록했습니다.</p>}
       {completeError && <p className="field-error" role="alert">{completeError}</p>}
       <p className="evidence-selection-status" role="status">
-        {selectedPair === undefined ? '면 관계를 선택 중입니다.' : `${selectedPair.a}·${selectedPair.b} 관계를 골랐습니다.`}
+        {selectedPair === undefined
+          ? '면 관계를 선택 중입니다.'
+          : `${faceIdLabel(selectedPair.a)}과 ${faceIdLabel(selectedPair.b)} 관계를 골랐습니다.`}
       </p>
     </section>
   );

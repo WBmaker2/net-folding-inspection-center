@@ -49,6 +49,12 @@ describe('AppShell', () => {
     expect(screen.getByLabelText('이 탭에서 새로고침 후에도 진행 저장')).not.toBeChecked();
   });
 
+  it('explains temporary saving without exposing storage implementation terms', () => {
+    render(<App />);
+    expect(screen.getByText('선택한 진행만 이 탭에 잠시 저장되며, 탭을 닫으면 사라집니다.')).toBeVisible();
+    expect(screen.queryByText(/sessionStorage/u)).not.toBeInTheDocument();
+  });
+
   it('shows stage progress and lets a learner return to mission selection', async () => {
     const user = userEvent.setup();
     render(<App />);

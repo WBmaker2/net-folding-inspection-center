@@ -14,6 +14,8 @@ import type {
   RepairSubmission,
 } from '../domain/learning/types';
 import { directionLabel } from '../domain/net/directionLabels';
+import { faceIdLabel } from '../components/net2d/faceLabels';
+import type { FaceId } from '../domain/net/types';
 import { validateCubeNet } from '../domain/net/validateCubeNet';
 import { useFocusHeading } from '../hooks/useFocusHeading';
 import { PrimaryAction } from '../components/common/PrimaryAction';
@@ -39,13 +41,23 @@ const statusText = (value: AchievementStatus): string => {
 };
 
 const pairText = (pair: { readonly a: string; readonly b: string } | undefined): string => (
-  pair === undefined ? '아직 선택하지 않음' : `${pair.a}·${pair.b}`
+  pair === undefined ? '아직 선택하지 않음' : `${faceIdLabel(pair.a as FaceId)}과 ${faceIdLabel(pair.b as FaceId)}`
 );
+const errorTypeText = (value: DiagnosisSubmission['selectedErrorType']): string => ({
+  overlap: '겹침',
+  'missing-face': '빈 면',
+  'decoration-direction': '무늬 방향',
+}[value]);
+const faceListText = (faceIds: readonly string[]): string => {
+  if (faceIds.length === 0) return '면 없음';
+  if (faceIds.length === 1) return faceIdLabel(faceIds[0] as FaceId);
+  return `${faceIdLabel(faceIds[0] as FaceId)}과 ${faceIdLabel(faceIds[1] as FaceId)}`;
+};
 const diagnosisText = (value: DiagnosisSubmission | undefined): string => (
-  value === undefined ? '아직 시도하지 않음' : `${value.selectedErrorType} · ${value.selectedFaceIds.join('·') || '면 없음'}${value.selectedMissingDirection === undefined ? '' : ` · 비어 있는 방향: ${directionLabel(value.selectedMissingDirection)}`}`
+  value === undefined ? '아직 시도하지 않음' : `${errorTypeText(value.selectedErrorType)} · ${faceListText(value.selectedFaceIds)}${value.selectedMissingDirection === undefined ? '' : ` · 비어 있는 방향: ${directionLabel(value.selectedMissingDirection)}`}`
 );
 const repairText = (value: RepairSubmission | undefined): string => (
-  value === undefined ? '아직 시도하지 않음' : `${value.faceId} → (${value.target.x}, ${value.target.y})${value.accepted ? ' · 수용됨' : ' · 다시 살펴봄'}`
+  value === undefined ? '아직 시도하지 않음' : `${faceIdLabel(value.faceId)}를 옮긴 시도 · ${value.accepted ? '맞는 자리' : '다시 살펴봄'}`
 );
 const evidenceText = (value: EvidenceSubmission | undefined): string => (
   value === undefined ? '아직 시도하지 않음' : `${pairText(value.oppositePair)} · ${value.selectedTerms.join(' · ')}`
@@ -160,8 +172,8 @@ export function CompletionScreen({
           <tbody>
             <tr>
               <th scope="row">예측</th>
-              <td>{firstPrediction?.predictedTopFaceId ?? '아직 시도하지 않음'}</td>
-              <td>{effectiveState.prediction?.predictedTopFaceId ?? '아직 시도하지 않음'}</td>
+              <td>{firstPrediction === undefined ? '아직 시도하지 않음' : faceIdLabel(firstPrediction.predictedTopFaceId)}</td>
+              <td>{effectiveState.prediction === null ? '아직 시도하지 않음' : faceIdLabel(effectiveState.prediction.predictedTopFaceId)}</td>
             </tr>
             <tr>
               <th scope="row">실제 면 관계</th>

@@ -30,6 +30,8 @@ describe('EvidenceScreen', () => {
     render(<EvidenceScreen mission={mission} validation={validateCubeNet(mission.net, 'F1')} onSubmit={onSubmit} />);
     await user.click(screen.getByRole('button', { name: '1번 면' }));
     await user.click(screen.getByRole('button', { name: '3번 면' }));
+    expect(screen.getByRole('status', { name: '' })).toHaveTextContent('1번 면과 3번 면 관계를 골랐습니다.');
+    expect(screen.queryByText(/F1|F3/u)).not.toBeInTheDocument();
     await user.selectOptions(screen.getByLabelText('관계를 나타내는 낱말'), '맞은편');
     await user.selectOptions(screen.getByLabelText('까닭을 나타내는 낱말'), '접는 방향');
     expect(screen.getByText('1번 면과 3번 면은 접는 방향을 따라가면 서로 맞은편이 됩니다.')).toBeVisible();

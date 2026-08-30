@@ -1,6 +1,7 @@
 import type { MissionDefinition, MissionId } from '../domain/learning/types';
 import type { CriticalActionId } from '../domain/learning/types';
 import { PrimaryAction } from '../components/common/PrimaryAction';
+import { formatFaceReferences } from '../content/learnerCopy';
 import '../styles/layout.css';
 
 export interface IntakeScreenProps {
@@ -98,7 +99,7 @@ export function IntakeScreen({
                           </span>
                         </div>
                         <h3>{mission.title}</h3>
-                        <p>{mission.question}</p>
+                        <p>{formatFaceReferences(mission.question)}</p>
                         <p className="mission-status" role="status" data-completed={isCompleted}>
                           {isCompleted ? '완료한 미션' : '아직 시작하지 않음'}
                         </p>

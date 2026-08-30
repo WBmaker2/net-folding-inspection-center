@@ -78,7 +78,7 @@ export function AppShell({
                 />
                 이 탭에서 새로고침 후에도 진행 저장
               </label>
-              <small>선택한 진행만 이 탭의 sessionStorage에 저장되며, 탭을 닫으면 사라집니다.</small>
+              <small>선택한 진행만 이 탭에 잠시 저장되며, 탭을 닫으면 사라집니다.</small>
             </div>
             {restoredFromStore ? (
               <p className="restore-notice" role="status" aria-live="polite">

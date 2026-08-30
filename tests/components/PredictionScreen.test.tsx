@@ -30,6 +30,8 @@ describe('PredictionScreen', () => {
     expect(overview).toHaveTextContent('접는 순서');
     expect(overview).toHaveTextContent('접는 방향');
     expect(screen.getByText('키보드: 면에서는 화살표로 이동하고 Enter로 선택해요.')).toBeVisible();
+    expect(screen.getByText('기준면을 고르면 이 단계가 열려요.')).toBeVisible();
+    expect(screen.queryByRole('group', { name: '예상 윗면 선택 전개도' })).not.toBeInTheDocument();
   });
 
   it('selects a base face with the keyboard and keeps incomplete predictions blocked', async () => {
@@ -45,9 +47,36 @@ describe('PredictionScreen', () => {
     await user.keyboard('{ArrowUp}{Enter}');
 
     expect(screen.getByText('기준면: 2번 면')).toBeVisible();
+    await user.click(within(screen.getByRole('group', { name: '예상 윗면 선택 전개도' }))
+      .getByRole('button', { name: /3번 면.*초록색.*삼각형/ }));
+    expect(screen.getByText('예상 윗면: 3번 면')).toBeVisible();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '접는 순서에 3번 면 추가' }));
     expect(screen.getByRole('list', { name: '예측한 접는 순서' })).toHaveTextContent('3번 면');
     expect(screen.getByRole('button', { name: '예측을 남기고 접기실로' })).toBeDisabled();
+  });
+
+  it('explains an invalid duplicate top-face choice and delays unrelated errors', async () => {
+    const user = userEvent.setup();
+    render(<PredictionScreen mission={getMissionById('cube-track-01')} onSubmit={vi.fn()} />);
+
+    await user.click(within(screen.getByRole('group', { name: '기준면 선택 전개도' }))
+      .getByRole('button', { name: /1번 면, 파란색, 원형/ }));
+    await user.click(within(screen.getByRole('group', { name: '예상 윗면 선택 전개도' }))
+      .getByRole('button', { name: /1번 면, 파란색, 원형/ }));
+    expect(screen.getByRole('alert')).toHaveTextContent('기준면과 다른 면을 윗면으로 골라 주세요.');
+    expect(screen.queryByText('기준면을 제외한 면 5개를 순서대로 넣어 주세요.')).not.toBeInTheDocument();
+
+    await user.click(within(screen.getByRole('group', { name: '예상 윗면 선택 전개도' }))
+      .getByRole('button', { name: /3번 면.*초록색.*삼각형/ }));
+    await user.click(screen.getByRole('button', { name: '접는 순서에 2번 면 추가' }));
+    for (const number of [3, 4, 5, 6]) {
+      await user.click(screen.getByRole('button', { name: `접는 순서에 ${number}번 면 추가` }));
+    }
+    expect(screen.queryByText('2번 면의 접는 방향을 골라 주세요.')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '2번 면의 북쪽 방향 ↑' }));
+    expect(screen.queryByText('2번 면의 접는 방향을 골라 주세요.')).not.toBeInTheDocument();
+    expect(screen.queryByText('3번 면의 접는 방향을 골라 주세요.')).not.toBeInTheDocument();
   });
 
   it('exposes face number, color, symbol, and position in accessible names', () => {
@@ -57,8 +86,7 @@ describe('PredictionScreen', () => {
 
     expect(within(screen.getByRole('group', { name: '기준면 선택 전개도' }))
       .getByRole('button', { name: /2번 면, 노란색, 사각형/ })).toBeVisible();
-    expect(within(screen.getByRole('group', { name: '예상 윗면 선택 전개도' }))
-      .getByRole('button', { name: /3번 면, 초록색, 삼각형/ })).toBeVisible();
+    expect(screen.queryByRole('group', { name: '예상 윗면 선택 전개도' })).not.toBeInTheDocument();
     expect(container.querySelector('.net-grid-select-base svg')).toHaveAttribute('aria-hidden', 'true');
   });
 
@@ -77,6 +105,8 @@ describe('PredictionScreen', () => {
 
     for (const faceId of ['F2', 'F3', 'F4', 'F5', 'F6']) {
       await user.click(screen.getByRole('button', { name: new RegExp(`접는 순서에 ${Number(faceId.slice(1))}번 면 추가`) }));
+    }
+    for (const faceId of ['F2', 'F3', 'F4', 'F5', 'F6']) {
       await user.click(screen.getByRole('button', { name: new RegExp(`${Number(faceId.slice(1))}번 면.*북쪽 방향`) }));
     }
 
@@ -116,6 +146,8 @@ describe('PredictionScreen', () => {
         .getByRole('button', { name: /3번 면, 초록색, 삼각형/ }));
       for (const number of [2, 3, 4, 5, 6]) {
         await activate(screen.getByRole('button', { name: `접는 순서에 ${number}번 면 추가` }));
+      }
+      for (const number of [2, 3, 4, 5, 6]) {
         await activate(screen.getByRole('button', { name: new RegExp(`${number}번 면의 북쪽 방향`) }));
       }
       await activate(screen.getByRole('button', { name: '예측을 남기고 접기실로' }));
@@ -142,6 +174,9 @@ describe('PredictionScreen', () => {
     for (const faceId of ['F2', 'F3', 'F4', 'F5', 'F6']) {
       const number = Number(faceId.slice(1));
       await user.click(screen.getByRole('button', { name: `접는 순서에 ${number}번 면 추가` }));
+    }
+    for (const faceId of ['F2', 'F3', 'F4', 'F5', 'F6']) {
+      const number = Number(faceId.slice(1));
       await user.click(screen.getByRole('button', { name: new RegExp(`${number}번 면.*북쪽 방향`) }));
     }
 

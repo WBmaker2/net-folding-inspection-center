@@ -313,7 +313,13 @@ h1 {
 
   .footer-tools {
     width: 100%;
+    flex-basis: auto;
+    min-height: 0;
     justify-content: space-between;
+  }
+
+  .footer-message {
+    flex-basis: auto;
   }
 
   .main-content {

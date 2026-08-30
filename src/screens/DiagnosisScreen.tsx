@@ -86,7 +86,6 @@ export function DiagnosisScreen({
   const [selectedMissingDirection, setSelectedMissingDirection] = useState<AxisDirection | undefined>();
   const [submitted, setSubmitted] = useState<DiagnosisSubmission | null>(null);
   const [isCorrectResult, setIsCorrectResult] = useState(false);
-  const [contextError, setContextError] = useState(false);
   const [collisionEvidence, setCollisionEvidence] = useState<CollisionEvidence | null>(null);
   const [reviewStep, setReviewStep] = useState<number | null>(null);
   const [feedback, setFeedback] = useState('');
@@ -109,7 +108,6 @@ export function DiagnosisScreen({
     setSelectedMissingDirection(undefined);
     setSubmitted(null);
     setIsCorrectResult(false);
-    setContextError(false);
     setCollisionEvidence(null);
     setReviewStep(null);
     setFeedback('');
@@ -125,7 +123,6 @@ export function DiagnosisScreen({
     });
     setSubmitted(null);
     setIsCorrectResult(false);
-    setContextError(false);
     setCollisionEvidence(null);
     setReviewStep(null);
     setFeedback('');
@@ -148,7 +145,6 @@ export function DiagnosisScreen({
     if (!evaluation.contextValid) {
       setSubmitted(null);
       setIsCorrectResult(false);
-      setContextError(true);
       setCollisionEvidence(null);
       setReviewStep(null);
       setSubmitError('검사 결과를 확인할 수 없어 진단을 기록하지 않았습니다. 접기 결과를 다시 불러와 주세요.');
@@ -163,7 +159,6 @@ export function DiagnosisScreen({
     }
     setSubmitted(diagnosis);
     setIsCorrectResult(evaluation.isCorrect);
-    setContextError(false);
     setCollisionEvidence(
       evaluation.isCorrect && evaluation.collisionPair !== undefined && evaluation.missingDirection !== undefined
         ? { faceIds: evaluation.collisionPair, missingDirection: evaluation.missingDirection }
@@ -217,11 +212,11 @@ export function DiagnosisScreen({
       {mission.kind === 'tracking' && (
         <section className="diagnosis-decoration-panel" aria-label="장식 방향 검사">
           <h2>장식 방향 검사</h2>
-          {submitted === null || contextError || evaluationUnavailableForTracking(suppliedDecoration) ? (
-            <p>{suppliedDecoration === undefined ? '아직 장식 방향 결과를 확인하지 않았습니다.' : '장식 방향 결과를 확인할 수 없습니다.'}</p>
+          {evaluationUnavailableForTracking(suppliedDecoration) ? (
+            <p>{suppliedDecoration === undefined ? '접기 결과가 아직 준비되지 않았습니다. 접기실에서 결과를 먼저 확인해 주세요.' : '장식 방향 결과를 읽지 못했습니다. 접기실에서 결과를 다시 확인해 주세요.'}</p>
           ) : suppliedDecoration !== undefined ? (
             <p>
-              실제 방향: {directionLabel(suppliedDecoration.worldUp)} · 목표 방향: {directionLabel(suppliedDecoration.targetWorldUp)} ·
+              접기 결과 비교 · 실제 방향: {directionLabel(suppliedDecoration.worldUp)} · 목표 방향: {directionLabel(suppliedDecoration.targetWorldUp)} ·
               {' '}{suppliedDecoration.matchesTarget ? '목표와 같습니다.' : '목표와 다릅니다.'}
             </p>
           ) : null}
@@ -303,7 +298,6 @@ export function DiagnosisScreen({
                     setSelectedMissingDirection(axis.value);
                     setSubmitted(null);
                     setIsCorrectResult(false);
-                    setContextError(false);
                     setCollisionEvidence(null);
                     setReviewStep(null);
                     setFeedback('');

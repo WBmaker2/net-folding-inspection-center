@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { NetGrid } from '../components/net2d/NetGrid';
 import { PrimaryAction } from '../components/common/PrimaryAction';
 import { faceNumber } from '../components/net2d/faceLabels';
+import { formatFaceReferences } from '../content/learnerCopy';
 import { useFocusHeading } from '../hooks/useFocusHeading';
 import '../styles/net2d.css';
 import type { CriticalActionId, MissionDefinition } from '../domain/learning/types';
@@ -41,7 +42,9 @@ export function PredictionScreen({ mission, onSubmit, criticalActionId, now = ()
   const [foldOrder, setFoldOrder] = useState<FaceId[]>([]);
   const [arrowByFace, setArrowByFace] = useState<Partial<Record<FaceId, FoldDirection>>>({});
   const [submitted, setSubmitted] = useState(false);
-  const [hasInteracted, setHasInteracted] = useState(false);
+  const [topSelectionError, setTopSelectionError] = useState('');
+  const [orderInteracted, setOrderInteracted] = useState(false);
+  const [directionInteracted, setDirectionInteracted] = useState<Set<FaceId>>(() => new Set());
 
   const movingFaceIds = useMemo(
     () => faceIdsExcept(mission, baseFaceId),
@@ -89,30 +92,38 @@ export function PredictionScreen({ mission, onSubmit, criticalActionId, now = ()
   ] as const;
 
   const selectBase = (faceId: FaceId): void => {
-    setHasInteracted(true);
     setBaseFaceId(faceId);
     setPredictedTopFaceId(null);
     setFoldOrder([]);
     setArrowByFace({});
+    setTopSelectionError('');
+    setOrderInteracted(false);
+    setDirectionInteracted(new Set());
     setSubmitted(false);
   };
 
   const selectTop = (faceId: FaceId): void => {
-    if (faceId !== baseFaceId) {
-      setHasInteracted(true);
-      setPredictedTopFaceId(faceId);
+    if (baseFaceId === null) {
+      setTopSelectionError('먼저 기준면을 골라 주세요.');
+      return;
     }
+    if (faceId === baseFaceId) {
+      setTopSelectionError('기준면과 다른 면을 윗면으로 골라 주세요.');
+      return;
+    }
+    setTopSelectionError('');
+    setPredictedTopFaceId(faceId);
   };
 
   const addFaceToOrder = (faceId: FaceId): void => {
     if (baseFaceId === null || faceId === baseFaceId || foldOrder.includes(faceId)) return;
-    setHasInteracted(true);
+    setOrderInteracted(true);
     setFoldOrder((previous) => previous.length >= 5 ? previous : [...previous, faceId]);
     setSubmitted(false);
   };
 
   const removeFaceFromOrder = (faceId: FaceId): void => {
-    setHasInteracted(true);
+    setOrderInteracted(true);
     setFoldOrder((previous) => previous.filter((candidate) => candidate !== faceId));
     setArrowByFace((previous) => {
       const next = { ...previous };
@@ -123,7 +134,11 @@ export function PredictionScreen({ mission, onSubmit, criticalActionId, now = ()
   };
 
   const setDirection = (faceId: FaceId, direction: FoldDirection): void => {
-    setHasInteracted(true);
+    setDirectionInteracted((previous) => {
+      const next = new Set(previous);
+      next.add(faceId);
+      return next;
+    });
     setArrowByFace((previous) => ({ ...previous, [faceId]: direction }));
     setSubmitted(false);
   };
@@ -147,7 +162,7 @@ export function PredictionScreen({ mission, onSubmit, criticalActionId, now = ()
     <section className="prediction-screen" aria-labelledby="prediction-title">
       <p className="eyebrow">예측 · 공간 추론</p>
       <h1 id="prediction-title" ref={headingRef} tabIndex={-1}>예측판</h1>
-      <p className="prediction-question">{mission.question}</p>
+      <p className="prediction-question">{formatFaceReferences(mission.question)}</p>
       <p className="model-note">
         접기는 실제 종이의 두께나 탄성을 재현하지 않는 기하 모형입니다.
       </p>
@@ -162,7 +177,7 @@ export function PredictionScreen({ mission, onSubmit, criticalActionId, now = ()
       </ol>
       <p className="keyboard-help">키보드: 면에서는 화살표로 이동하고 Enter로 선택해요.</p>
 
-      <section className="prediction-step" aria-labelledby="base-title">
+      <section className="prediction-step" data-step-state={predictionSteps[0].state} aria-labelledby="base-title">
         <h2 id="base-title">1. 기준면을 골라 보세요</h2>
         <NetGrid
           net={mission.net}
@@ -177,8 +192,9 @@ export function PredictionScreen({ mission, onSubmit, criticalActionId, now = ()
         </p>
       </section>
 
-      <section className="prediction-step" aria-labelledby="top-title">
+      <section className="prediction-step" data-step-state={predictionSteps[1].state} aria-labelledby="top-title">
         <h2 id="top-title">2. 예상 윗면을 골라 보세요</h2>
+        {predictionSteps[1].state === 'upcoming' && <p className="prediction-step-gate">기준면을 고르면 이 단계가 열려요.</p>}
         <NetGrid
           net={mission.net}
           mode="select-move-target"
@@ -190,10 +206,12 @@ export function PredictionScreen({ mission, onSubmit, criticalActionId, now = ()
         <p className="selection-summary" aria-live="polite">
           예상 윗면: {predictedTopFaceId === null ? '아직 선택하지 않음' : `${faceNumber(faceById.get(predictedTopFaceId)!)}번 면`}
         </p>
+        {topSelectionError && <p className="field-error" role="alert">{topSelectionError}</p>}
       </section>
 
-      <section className="prediction-step" aria-labelledby="order-title">
+      <section className="prediction-step" data-step-state={predictionSteps[2].state} aria-labelledby="order-title">
         <h2 id="order-title">3. 다섯 면이 접히는 순서를 정해 보세요</h2>
+        {predictionSteps[2].state === 'upcoming' && <p className="prediction-step-gate">예상 윗면을 고르면 순서를 정할 수 있어요.</p>}
         <div className="face-order-options" aria-label="접는 순서에 넣을 면">
           {movingFaceIds.map((faceId) => {
             const number = faceNumber(faceById.get(faceId)!);
@@ -224,13 +242,14 @@ export function PredictionScreen({ mission, onSubmit, criticalActionId, now = ()
             );
           })}
         </ol>
-        {hasInteracted && foldOrder.length !== 5 && (
+        {orderInteracted && foldOrder.length !== 5 && (
           <p className="field-error" role="alert">기준면을 제외한 면 5개를 순서대로 넣어 주세요.</p>
         )}
       </section>
 
-      <section className="prediction-step" aria-labelledby="direction-title">
+      <section className="prediction-step" data-step-state={predictionSteps[3].state} aria-labelledby="direction-title">
         <h2 id="direction-title">4. 각 면의 유효한 접는 방향을 표시해 보세요</h2>
+        {predictionSteps[3].state === 'upcoming' && <p className="prediction-step-gate">다섯 면의 순서를 모두 정하면 방향을 고를 수 있어요.</p>}
         {foldOrder.length === 0 && (
           <p className="field-help">순서에 면을 넣으면 북쪽·동쪽·남쪽·서쪽 방향을 고를 수 있습니다.</p>
         )}
@@ -254,7 +273,7 @@ export function PredictionScreen({ mission, onSubmit, criticalActionId, now = ()
                     </button>
                   ))}
                 </div>
-                {hasInteracted && arrowByFace[faceId] === undefined && (
+                {directionInteracted.has(faceId) && arrowByFace[faceId] === undefined && (
                   <p className="field-error" role="alert">{number}번 면의 접는 방향을 골라 주세요.</p>
                 )}
               </fieldset>

@@ -110,6 +110,9 @@ describe('DiagnosisScreen', () => {
         onSubmit={onSubmit}
       />,
     );
+    expect(screen.getByRole('region', { name: '장식 방향 검사' })).toHaveTextContent(
+      '접기 결과 비교 · 실제 방향: 위 방향 · 목표 방향: 위 방향 · 목표와 같습니다.',
+    );
     await user.click(screen.getByRole('radio', { name: '무늬 방향이 달라요' }));
     await user.click(screen.getByRole('button', { name: /3번 면/ }));
     await user.click(screen.getByRole('button', { name: '진단 확인' }));

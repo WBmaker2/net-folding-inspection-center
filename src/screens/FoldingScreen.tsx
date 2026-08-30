@@ -79,7 +79,7 @@ export function FoldingScreen({
         aria-labelledby="folding-title"
         aria-describedby="folding-model-boundary"
       >
-        <p className="eyebrow">접기실 · 2D 관계 보기</p>
+        <p className="eyebrow">접기실 · 3D 보조 보기와 관계 표</p>
         <h1 id="folding-title" ref={headingRef} tabIndex={-1}>한 면씩 접기</h1>
         <p className="field-error" role="alert">이 예측한 순서로는 접기 단계를 만들 수 없습니다.</p>
         <PrimaryAction
@@ -110,9 +110,10 @@ export function FoldingScreen({
       data-motion-mode={reducedMotion ? 'instant' : 'smooth'}
       data-validation-reason={validation?.reason ?? 'not-provided'}
     >
-      <p className="eyebrow">접기실 · 2D 관계 보기</p>
+      <p className="eyebrow">접기실 · 3D 보조 보기와 관계 표</p>
       <h1 id="folding-title" ref={headingRef} tabIndex={-1}>한 면씩 접기</h1>
       <p className="folding-intro">예측한 접는 순서를 따라 면과 모서리의 관계를 확인해 보세요.</p>
+      <p className="folding-view-help">3D 보조 보기에서는 모양을 보고, 관계 표에서는 면 이름과 방향을 확인해 보세요.</p>
       <p className="model-note" id="folding-model-boundary">
         이 가상 접기는 면의 연결 관계를 보여 주는 기하 모형이며 실제 종이의 두께·휘어짐·포장 강도·안전성을 보장하지 않습니다.
       </p>

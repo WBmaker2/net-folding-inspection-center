@@ -27,4 +27,5 @@ export const CHANGELOG: readonly UpdateEntry[] = Object.freeze([
   Object.freeze({ date: '2026-08-28', category: '접근성', summary: 'VoiceOver 구현·검증 제외 범위와 자동화 접근성 기준 명시' }),
   Object.freeze({ date: '2026-08-29', category: '개발', summary: '학습 목적·단계 진행·미션 카드 위계를 정리하고 접기 조작 표면 개선' }),
   Object.freeze({ date: '2026-08-30', category: '개발', summary: '미션별 진행 단계와 수리 화면 표현을 학습자 중심으로 정리' }),
+  Object.freeze({ date: '2026-08-30', category: '접근성', summary: '모바일 단계 게이트·어린이용 면 이름·진단 방향 비교를 명확하게 개선' }),
 ]);
