@@ -24,10 +24,10 @@ export interface CubeFoldViewerProps {
 }
 
 const VIEW_LABELS: Readonly<Record<CubeFoldView, string>> = {
-  front: '정면 고정',
-  right: '오른쪽 고정',
-  top: '위 고정',
-  'fixed-base': '기준면 고정',
+  front: '정면에서 보기',
+  right: '오른쪽에서 보기',
+  top: '위에서 보기',
+  'fixed-base': '기준면 중심으로 보기',
 };
 
 const viewKeys: readonly CubeFoldView[] = ['front', 'right', 'top', 'fixed-base'];
@@ -57,7 +57,7 @@ export function CubeFoldViewer({
       aria-label="접기 3D 보조 보기"
       data-motion-mode={reducedMotion ? 'snap' : 'limited'}
     >
-      <div className="cube-view-controls" aria-label="고정 시점 선택">
+      <div className="cube-view-controls" aria-label="보기 시점 선택">
         {viewKeys.map((viewKey) => (
           <button
             key={viewKey}

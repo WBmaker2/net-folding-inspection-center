@@ -192,7 +192,7 @@ export function EvidenceScreen({
 
       <fieldset className="evidence-fieldset">
         <legend>2. 관계나 결과 낱말을 골라 보세요</legend>
-        <p className="field-help">첫 번째는 면의 관계, 두 번째는 그 관계를 찾은 까닭을 나타냅니다.</p>
+        <p className="field-help">첫 번째 낱말은 면의 관계, 두 번째 낱말은 그 까닭을 나타내요.</p>
         <label htmlFor="evidence-term-relationship">관계를 나타내는 낱말</label>
         <select
           id="evidence-term-relationship"
@@ -221,7 +221,7 @@ export function EvidenceScreen({
 
       <section className="evidence-preview" aria-label="근거 문장 미리보기" aria-live="polite">
         <h2>문장 미리보기</h2>
-        <p>{preview ?? '면 두 개와 기하 낱말 두 개를 고르면 문장이 나타납니다.'}</p>
+        <p>{preview ?? '면 두 개와 낱말 두 개를 고르면 문장이 나타나요.'}</p>
       </section>
       {submitError && <p className="field-error" role="alert">{submitError}</p>}
       {draft !== null && preview !== null && !isCorrectDraft && (

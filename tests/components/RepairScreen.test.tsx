@@ -2,7 +2,8 @@ import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getMissionById } from '../../src/content/missions/catalog';
-import { RepairScreen } from '../../src/screens/RepairScreen';
+import { evaluateRepair, rotateFaceDecoration } from '../../src/domain/learning/repair';
+import { describeRepairEvaluation, RepairScreen } from '../../src/screens/RepairScreen';
 
 const mission = getMissionById('cube-repair-01');
 
@@ -14,6 +15,14 @@ const targetAt = (x: number, y: number): HTMLElement => {
 
 describe('RepairScreen', () => {
   afterEach(() => cleanup());
+
+  it('explains the single-face constraint with concrete visual details', () => {
+    const candidate = rotateFaceDecoration(mission.net, 'F1');
+    const evaluation = evaluateRepair(mission.net, candidate, mission.baseFaceId);
+    expect(evaluation.isSingleFaceMove).toBe(false);
+    expect(describeRepairEvaluation(evaluation)).toBe('한 면의 위치만 바꾸고, 색과 무늬는 그대로 두세요.');
+  });
+
   it('selects a face and target, previews immutably, confirms without drag handlers', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();

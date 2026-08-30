@@ -142,7 +142,7 @@ describe('Task 13 integrated learner flow', () => {
     await choosePrediction(user, 3);
     expectOnePulse('다음 면 접기');
     expect(screen.getByRole('button', { name: '업데이트 내역' })).not.toHaveClass('gi-pulse');
-    const frontView = screen.queryByRole('button', { name: '정면 고정' });
+    const frontView = screen.queryByRole('button', { name: '정면에서 보기' });
     if (frontView !== null) expect(frontView).not.toHaveClass('gi-pulse');
     await finishFolding(user);
     expect(screen.queryByRole('heading', { name: '접힌 결과 진단하기' })).not.toBeInTheDocument();

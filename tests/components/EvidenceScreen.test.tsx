@@ -14,6 +14,8 @@ describe('EvidenceScreen', () => {
   it('labels each word select by its role and exposes only role-safe options', () => {
     const mission = getMissionById('cube-collision-01');
     render(<EvidenceScreen mission={mission} onSubmit={vi.fn()} />);
+    expect(screen.getByText('첫 번째 낱말은 면의 관계, 두 번째 낱말은 그 까닭을 나타내요.')).toBeVisible();
+    expect(screen.getByText('면 두 개와 낱말 두 개를 고르면 문장이 나타나요.')).toBeVisible();
     const options = getEvidenceTermOptions(mission);
     const relationship = screen.getByLabelText('관계를 나타내는 낱말');
     const path = screen.getByLabelText('까닭을 나타내는 낱말');

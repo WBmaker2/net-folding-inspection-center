@@ -113,9 +113,10 @@ describe('scene model and CubeFoldViewer', () => {
     expect(screen.queryByRole('button', { name: /자동 회전/ })).not.toBeInTheDocument();
     const buttons = screen.getAllByRole('button');
     expect(buttons).toHaveLength(4);
-    expect(screen.getByRole('button', { name: '정면 고정' })).toHaveAttribute('aria-pressed', 'true');
-    fireEvent.click(screen.getByRole('button', { name: '위 고정' }));
-    expect(screen.getByRole('button', { name: '위 고정' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '정면에서 보기' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: '위에서 보기' }));
+    expect(screen.getByRole('button', { name: '위에서 보기' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: '기준면 중심으로 보기' })).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('uses a hidden canvas area and falls back safely when WebGL is absent', () => {
@@ -163,6 +164,6 @@ describe('scene model and CubeFoldViewer', () => {
     );
     expect(collisionFaces.some((face) => face.collision && face.status === 'collision')).toBe(true);
     const { container } = renderViewer(0);
-    expect(container.querySelector('[aria-label="고정 시점 선택"]')).toBeInTheDocument();
+    expect(container.querySelector('[aria-label="보기 시점 선택"]')).toBeInTheDocument();
   });
 });
