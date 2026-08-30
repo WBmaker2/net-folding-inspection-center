@@ -25,4 +25,6 @@ export const CHANGELOG: readonly UpdateEntry[] = Object.freeze([
   Object.freeze({ date: '2026-08-28', category: '기하 엔진', summary: '3D 보조 보기의 장면 중심과 읽을 수 있는 확대 계산 개선' }),
   Object.freeze({ date: '2026-08-28', category: '콘텐츠', summary: '완료 화면의 배운 점·다음에는 요약과 모바일 비교표 개선' }),
   Object.freeze({ date: '2026-08-28', category: '접근성', summary: 'VoiceOver 구현·검증 제외 범위와 자동화 접근성 기준 명시' }),
+  Object.freeze({ date: '2026-08-29', category: '개발', summary: '학습 목적·단계 진행·미션 카드 위계를 정리하고 접기 조작 표면 개선' }),
+  Object.freeze({ date: '2026-08-30', category: '개발', summary: '미션별 진행 단계와 수리 화면 표현을 학습자 중심으로 정리' }),
 ]);

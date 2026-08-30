@@ -115,3 +115,84 @@ VoiceOver 수동 보조기술 검증도 수행하지 않습니다. 키보드·ax
 불가능한 접기 순서의 복귀·재제출과 중첩 symbolic link fail-closed 경계를 추가했고,
 Pages-safe favicon을 배포했습니다. VoiceOver + Safari 구현·검증은 사용자 지침에 따라
 범위에서 제외했습니다.
+
+## 2026-08-29 교육 웹앱 리디자인 로컬 검증
+
+이번 리디자인은 현재 작업 트리에서만 구현·검증했으며 커밋·푸시·배포하지 않았습니다.
+기존 공개 Pages URL은 아래 작업의 결과를 포함한다고 주장하지 않습니다.
+
+### 변경 요약
+
+- `AppShell`에 본문 건너뛰기 링크, 브랜드 설명, 접근 가능한 `StageProgress`, 미션 재선택
+  버튼을 배치했습니다.
+- `IntakeScreen`에 학습 결과 3가지, 단계·난이도·완료 상태, 명확한 미션 CTA를 추가했습니다.
+- `PredictionScreen`에 기준면·윗면·접는 순서·방향 4단계 개요와 키보드 도움말을 추가했습니다.
+- `FoldingScreen`의 상태·range·이전/다음·보기 옵션을 `접기 조작` 카드로 묶고 375px·200%
+  확대용 grid를 추가했습니다.
+- 진단·수리·근거·완료 표면, primary action, 성공/오류 상태를 토큰으로 통일했습니다.
+- 2026-08-29 업데이트 내역을 기록했고, Playwright 포트 주입·`--strictPort`로 다른 앱
+  서버 재사용을 fail-fast로 바꿨습니다.
+
+### 명령별 결과
+
+| 명령 | 결과 |
+|---|---|
+| `PLAYWRIGHT_PORT=4176 PLAYWRIGHT_BASE_URL=http://127.0.0.1:4176 CI=1 npm run verify` | PASS — lint, typecheck, Vitest 31 files/260 tests, Playwright E2E 21/21, file-size, offline-boundary, Vite build |
+| `node /tmp/net-folding-redesign-audit.cjs` | PASS — 1440×900, 375×812, 320×800; 각 폭 overflow 0·콘솔 오류 0·미션 선택 후 `prediction-title` focus |
+| `node /tmp/net-folding-redesign-full.cjs` | PASS — 예측→접기→진단→수리→근거→완료 heading 및 1280px 캡처 확인 |
+| `node /tmp/net-folding-overflow.cjs` | PASS — 375px·200% 접기 단계 document `scrollWidth=375`, `clientWidth=375` |
+
+Vitest 전체 결과는 31개 파일·260개 테스트 통과입니다. Playwright는 accessibility,
+learner-flow, privacy-safety, responsive를 포함해 21개가 통과했고, reduced-motion·forced-
+colors·axe 심각 위반 0·외부 origin 0을 확인했습니다. 빌드 출력에는 기존 Three.js
+chunk advisory만 있습니다.
+
+초기 `npm run verify` 한 번은 4173 포트의 다른 프로젝트 서버를 재사용해 잘못된 앱의
+브라우저 assertion을 냈습니다. 해당 결과는 릴리스 증거에서 제외하고, 설정에
+`PLAYWRIGHT_PORT`, `PLAYWRIGHT_BASE_URL`, Vite `--strictPort`를 반영한 뒤 4176에서
+재실행했습니다. 다른 프로젝트 서버는 종료·변경하지 않았습니다.
+
+### 현재 릴리스 상태
+
+- 커밋·푸시·배포: **수행하지 않음**
+- HVC 등록: **수행하지 않음**
+- 기존 공개 URL: [https://wbmaker2.github.io/net-folding-inspection-center/](https://wbmaker2.github.io/net-folding-inspection-center/) — 리디자인 전 배포본
+- 다음 승인 단계: 실제 초등학생·교사 수동 사용성 관찰과 배포 승인 후 별도 release gate
+- VoiceOver + Safari: **범위 제외**
+
+### 2026-08-29 대비 보정 후 재검증
+
+- 수리 상태 카드 전경색을 `#147da1`에서 `#0f6685`(`--accent-strong`)로 바꾸고
+  `#def3f4`(`--accent-soft`) 배경 대비를 정적 계산 `5.59:1`로 확인했습니다.
+- `npm run lint`, `npm run typecheck`, `npm test -- --run`(31 files/260 tests),
+  `npm run check:file-size`, `npm run check:offline-boundary`, `npm run build`는 모두
+  통과했습니다.
+- 동일한 `PLAYWRIGHT_PORT=4176 PLAYWRIGHT_BASE_URL=http://127.0.0.1:4176 CI=1 npm run verify`
+  재실행은 관리형 macOS Chromium이 모든 브라우저 케이스에서 page 생성 전
+  `MachPortRendezvous ... Permission denied`로 종료되어 **BLOCKED**입니다. 보정 전
+  고립 실행의 E2E 21/21 결과와 구분하며, 최신 axe 결과를 통과로 표시하지 않습니다.
+- 브라우저 권한이 가능한 별도 실행 환경에서 `npm run test:e2e`를 다시 실행한 뒤
+  배포 release gate를 열 수 있습니다. 이 작업에서는 커밋·푸시·배포·HVC 등록을
+  수행하지 않았습니다.
+
+### 2026-08-30 학습자 표현·진행 경로 보정
+
+이번 보정은 아직 커밋·푸시·배포하지 않은 현재 작업 트리에만 적용했습니다. 미션
+종류별 단계 수를 진행 표시와 연결하고, 수리 미리보기에서 내부 좌표·ID를 제거했으며,
+첫 미션 바로가기·추천 카드와 SVG 장식을 추가했습니다. 판정·저장·오프라인 경계는
+변경하지 않았습니다. 장식용 CSS 그라디언트는 solid light-mode 토큰으로 교체했습니다.
+
+| 검사 | 결과 |
+|---|---|
+| `npm run lint` | PASS — 오류·경고 없음 |
+| `npm run typecheck` | PASS |
+| `npm test -- --run` | PASS — 31 files, 262 tests |
+| `npm run check:file-size` | PASS — authored files under 500 lines |
+| `npm run check:offline-boundary` | PASS — `src` 외부 client/URL 없음 |
+| `npm run build` | PASS — Vite build 완료, Three.js chunk advisory만 출력 |
+| 최신 `npm run test:e2e` | BLOCKED — 반복된 관리형 macOS Chromium `MachPortRendezvous ... Permission denied`가 page 생성 전에 발생하여 재실행하지 않음 |
+
+`npm test` 출력에 포함된 오프라인 경계 fixture의 symbolic link·외부 client 오류는
+악성 입력을 거부하는 하위 테스트가 의도적으로 출력한 내용이며 전체 테스트는 통과했습니다.
+브라우저·axe 결과는 보정 전 격리 실행 21/21을 역사적 증거로만 유지하고, 이번 보정 후
+결과로 표시하지 않습니다.
