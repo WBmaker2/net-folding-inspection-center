@@ -94,3 +94,12 @@
 ## 릴리스 경계
 
 구현 검토 세션에서는 커밋, 푸시, 배포, HVC 등록을 실행하지 않았습니다. 릴리스 세션은 변경 파일과 `work/` 증거 문서를 재검토하고, 검증 결과·커밋·PR 병합·Pages 주소를 아래에 별도로 기록합니다.
+
+## 릴리스 결과 (2026-08-30)
+
+- PR [#2](https://github.com/WBmaker2/net-folding-inspection-center/pull/2)를 `main`에 병합했습니다. 병합 커밋은 `b1af7e556693ff8c09bb0d4a3af35c422b89bd63c`입니다.
+- GitHub Pages [workflow 33315502932](https://github.com/WBmaker2/net-folding-inspection-center/actions/runs/33315502932)의 `build`와 `deploy` job이 성공했습니다.
+- 공개 주소는 [https://wbmaker2.github.io/net-folding-inspection-center/](https://wbmaker2.github.io/net-folding-inspection-center/)이며 HTTP 200, 제목 `전개도 포장 검수소`, 새 JS 문구와 favicon HTTP 200을 확인했습니다.
+- 로컬 단위/정적 검증은 32개 파일·267개 테스트, lint, typecheck, build, file-size, offline-boundary가 통과했습니다.
+- `npm run test:e2e`는 호스트의 Playwright Chromium 실행 파일 부재로 21개 모두 browser launch 단계에서 차단되었고, 브라우저 설치는 하지 않았습니다. in-app 브라우저 검증 결과는 `work/elementary-webapp-ux-simulation-test.md`에 분리 기록했습니다.
+- HVC 등록은 이번 릴리스 범위에 포함하지 않았습니다.

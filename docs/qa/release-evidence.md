@@ -232,3 +232,28 @@ GitHub Actions [33311820565](https://github.com/WBmaker2/net-folding-inspection-
 - in-app 브라우저: 320×800·375×812·1280×720 가로 넘침 없음, console error 0건
 - 정식 로컬 Playwright CLI: `chrome-headless-shell` 누락으로 실행하지 않음
 - HVC 등록: 실행하지 않음
+
+## 2026-08-30 단어·문장 표현 및 시뮬레이션 2단계 배포
+
+이번 릴리스는 단어·문장 표현과 접기 시뮬레이션 2단계만 다뤘습니다. PR
+[#2](https://github.com/WBmaker2/net-folding-inspection-center/pull/2)의 두 커밋을
+`main`에 병합했고, 병합 커밋은 `b1af7e556693ff8c09bb0d4a3af35c422b89bd63c`입니다.
+
+| 항목 | 결과 |
+|---|---|
+| 애플리케이션 단위 테스트 | PASS — 32개 파일, 267개 테스트 |
+| lint / typecheck / build | PASS — Vite build 완료, Three.js chunk advisory만 출력 |
+| file-size / offline-boundary | PASS |
+| Playwright CLI E2E | BLOCKED — 호스트에 Chromium 실행 파일이 없어 browser launch 단계에서 중단; 설치하지 않음 |
+| GitHub Pages workflow | PASS — [33315502932](https://github.com/WBmaker2/net-folding-inspection-center/actions/runs/33315502932)의 build/deploy job 성공 |
+| 공개 루트 | PASS — [https://wbmaker2.github.io/net-folding-inspection-center/](https://wbmaker2.github.io/net-folding-inspection-center/) HTTP 200 |
+
+공개 HTML 제목은 `전개도 포장 검수소`이며, `/net-folding-inspection-center/assets/`
+base 경로의 JS 자산과 `favicon.svg`가 HTTP 200입니다. 공개 JS 번들에서
+`처음부터 다시 보기`, `정면에서 보기`, `첫 번째 낱말은 면의 관계` 문구를 확인했습니다.
+in-app 브라우저에서는 320·375·1280px 가로 넘침 없음, 접기 초기화, 시점
+`aria-pressed`, reduced-motion, 근거 문장 생성을 확인했습니다.
+
+이번 릴리스에서 HVC 등록은 실행하지 않았습니다. `.playwright-cli/`,
+`.playwright-mcp/`, `output/`, 대용량 후보 원본 문서는 사용자 산출물 또는 생성 원본으로
+스테이징하지 않았습니다.
