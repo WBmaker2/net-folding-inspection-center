@@ -59,4 +59,21 @@ describe('AppShell', () => {
     expect(screen.getByRole('heading', { name: '검수 접수' })).toBeVisible();
     expect(screen.queryByText('2 / 6 · 예측')).not.toBeInTheDocument();
   });
+
+  it('shows the shorter progress path for an opposite-face mission', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: '맞은편 면 찾기 1 미션 선택' }));
+
+    expect(screen.getByText('2 / 5 · 예측')).toBeVisible();
+    expect(screen.queryByText('2 / 6 · 예측')).not.toBeInTheDocument();
+  });
+
+  it('shows the repair path before diagnosis and evidence for a collision mission', async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByRole('button', { name: '겹침 경보 1 미션 선택' }));
+
+    expect(screen.getByText('2 / 7 · 예측')).toBeVisible();
+  });
 });

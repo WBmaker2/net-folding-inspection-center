@@ -20,7 +20,7 @@ describe('PrimaryAction', () => {
       </PrimaryAction>,
     );
     const button = screen.getByTestId('submit');
-    expect(button).toHaveClass('custom-action', 'gi-pulse');
+    expect(button).toHaveClass('custom-action', 'primary-action', 'gi-pulse');
     expect(button).toHaveAttribute('aria-label', '예측 제출');
     expect(ref.current).toBe(button);
   });
