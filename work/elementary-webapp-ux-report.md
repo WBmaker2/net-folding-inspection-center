@@ -141,4 +141,4 @@ in-app Playwright 확인:
 
 ## 릴리스 경계
 
-이번 요청에서는 소스·테스트·문서 개선만 수행했습니다. 커밋, 푸시, 배포, HVC 등록, 외부 서비스 연결은 실행하지 않았습니다.
+이번 개선은 커밋 `de53d0f`로 `main`에 커밋·푸시했고 GitHub Actions `33311820565`의 `build`·`deploy` job이 성공했습니다. 공개 Pages는 [https://wbmaker2.github.io/net-folding-inspection-center/](https://wbmaker2.github.io/net-folding-inspection-center/)에서 확인했습니다. HVC 등록과 외부 서비스 연결은 실행하지 않았습니다.

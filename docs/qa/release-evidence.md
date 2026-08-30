@@ -215,3 +215,20 @@ chunk advisory만 있습니다.
 로컬 Playwright/axe는 관리형 macOS Chromium이 page 생성 전에
 `MachPortRendezvous ... Permission denied`로 종료되어 최신 변경의 자동 브라우저 PASS를
 주장하지 않습니다. 보정 전 격리 실행의 21/21 결과는 역사적 증거로 남겼습니다.
+
+## 2026-08-30 초등 학습자 UX 개선 배포
+
+초등학생 관점의 전체 UX 점검 결과를 구현한 커밋 `de53d0f`를 `main`에 푸시했습니다.
+GitHub Actions [33311820565](https://github.com/WBmaker2/net-folding-inspection-center/actions/runs/33311820565)의
+`build`와 `deploy` job이 모두 성공했습니다.
+
+- 공개 Pages: [https://wbmaker2.github.io/net-folding-inspection-center/](https://wbmaker2.github.io/net-folding-inspection-center/)
+- 공개 HTML: HTTP 200, 제목 `전개도 포장 검수소`
+- 공개 자산: 새 JS/CSS/favicon 모두 HTTP 200
+- 공개 산출물 확인: `기준면과 다른 면을 윗면으로 골라 주세요.`, `모바일 단계 게이트`,
+  `접기 결과 비교` 문구가 배포 JS에 포함됨
+- 로컬 검증: Vitest 32 files/265 tests, lint, typecheck, build, file-size,
+  offline-boundary 통과
+- in-app 브라우저: 320×800·375×812·1280×720 가로 넘침 없음, console error 0건
+- 정식 로컬 Playwright CLI: `chrome-headless-shell` 누락으로 실행하지 않음
+- HVC 등록: 실행하지 않음

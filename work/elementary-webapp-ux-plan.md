@@ -240,3 +240,11 @@ npx playwright test --project=chromium
 2. 테스트·lint·typecheck·build·file-size·offline-boundary 결과를 확인.
 3. UX 개선 단위별로 커밋 메시지를 만든다: `fix(ux): clarify learner feedback and mobile flow`.
 4. 사용자가 별도로 승인한 경우에만 push·배포·공개 URL 검증을 수행한다.
+
+## 실제 릴리스 결과
+
+- 구현 커밋: `de53d0f` (`fix(ux): clarify learner feedback and mobile flow`)
+- 원격: `main` push 완료
+- GitHub Actions: [33311820565](https://github.com/WBmaker2/net-folding-inspection-center/actions/runs/33311820565) `build`·`deploy` 성공
+- 공개 주소: [https://wbmaker2.github.io/net-folding-inspection-center/](https://wbmaker2.github.io/net-folding-inspection-center/)
+- HVC 등록: 실행하지 않음
