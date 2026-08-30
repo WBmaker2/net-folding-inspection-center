@@ -74,7 +74,7 @@ Playwright를 재실행한 결과는 page 생성 전 `MachPortRendezvous ... Per
 차단되어, 최신 E2E·axe 항목을 PASS로 갱신하지 않았습니다. 브라우저 권한이 가능한
 환경에서 위 `npm run verify`를 재실행해야 합니다.
 
-## 2026-08-30 진행 경로·수리 표현 보정
+## 2026-08-30 진행 경로·수리 표현 보정 (배포 전 기록)
 
 현재 작업 트리의 정적·컴포넌트 검증 결과입니다. 커밋·배포 전 상태이며, 관리형
 macOS Chromium의 반복된 `MachPortRendezvous ... Permission denied` 때문에 최신
@@ -87,3 +87,13 @@ macOS Chromium의 반복된 `MachPortRendezvous ... Permission denied` 때문에
 | 첫 미션 진입성·단일 강조 | PASS (Vitest) | `tests/components/IntakeScreen.test.tsx`에서 `첫 미션부터 시작하기`, `.is-featured`, 단일 `gi-pulse` 확인 |
 | 토큰·상태 표면·SVG 장식·solid 표면 | PASS (lint/typecheck/build) | `src/styles/tokens.css`, `src/components/net3d/sceneColors.ts`; 별도 브라우저 대비 재확인은 권한 가능한 환경에서 실행 |
 | 최신 Playwright·axe | **차단됨** | 페이지 생성 전 Chromium 권한 오류. 보정 전 격리 실행 21/21은 역사적 결과로만 유지 |
+
+## 2026-08-30 Pages 배포 후 상태
+
+PR [#1](https://github.com/WBmaker2/net-folding-inspection-center/pull/1)의 병합 커밋
+`b49aaa3d5db7a144cf040b92fade2b9dcb35313c`에 대해 Pages workflow
+[33292372449](https://github.com/WBmaker2/net-folding-inspection-center/actions/runs/33292372449)의
+build/deploy job이 성공했습니다. 공개 주소는
+[https://wbmaker2.github.io/net-folding-inspection-center/](https://wbmaker2.github.io/net-folding-inspection-center/)이며,
+HTTP 200·문서 제목·배포 asset 200을 curl로 확인했습니다. 이 기록은 자동 Chromium/axe
+검증을 대체하지 않으며, VoiceOver·Safari와 human sign-off는 범위에서 제외합니다.

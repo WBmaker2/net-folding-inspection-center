@@ -13,8 +13,11 @@
 미션 선택 → 예측(기준면·윗면·순서·방향) → 한 면씩 접기 → 진단 → 수리 → 근거 문장 → 완료
 ```
 
-커밋·푸시·배포·HVC 등록은 이 작업에서 수행하지 않았습니다. 기존 공개 Pages 주소는
-리디자인 전 배포본으로만 제시합니다: [https://wbmaker2.github.io/net-folding-inspection-center/](https://wbmaker2.github.io/net-folding-inspection-center/)
+이번 승인으로 커밋·푸시·GitHub Pages 배포를 완료했습니다. PR [#1](https://github.com/WBmaker2/net-folding-inspection-center/pull/1)이
+`b49aaa3d5db7a144cf040b92fade2b9dcb35313c`로 `main`에 병합되었고, Pages workflow
+[33292372449](https://github.com/WBmaker2/net-folding-inspection-center/actions/runs/33292372449)의
+build/deploy job이 성공했습니다. HVC 등록은 수행하지 않았습니다. 배포 주소:
+[https://wbmaker2.github.io/net-folding-inspection-center/](https://wbmaker2.github.io/net-folding-inspection-center/)
 
 ## 설계 요구사항 연결
 
@@ -161,8 +164,8 @@ macOS Chromium의 `MachPortRendezvous` 권한 오류로 브라우저 시작 전�
   `imagegen`은 자산 안전성 검토 결과 실행하지 않았습니다.
 - 인간 초등학생·교사 사용자의 실제 관찰, Safari 수동 확인, VoiceOver + Safari 검증은
   수행하지 않았습니다. 이는 자동화 PASS와 별도의 수동 승인 단계입니다.
-- 커밋·푸시·배포·HVC 등록은 수행하지 않았습니다. 배포가 필요하면 먼저 사용자 승인을
-  받은 뒤 독립적인 release gate로 실행해야 합니다.
+- 커밋·푸시·배포는 완료했습니다. HVC 등록은 별도 승인 범위가 아니어서 수행하지
+  않았습니다.
 - 기존 `output/` 디렉터리는 사용자 작업으로 보고 수정·삭제하지 않았습니다.
 
 ## 2026-08-30 독립 점검 후속 구현

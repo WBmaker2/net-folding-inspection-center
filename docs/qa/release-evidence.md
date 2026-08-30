@@ -100,7 +100,7 @@ VoiceOver 수동 보조기술 검증도 수행하지 않습니다. 키보드·ax
 - 공개 HTML의 문서 제목은 `전개도 포장 검수소`이며 Vite asset 경로는 `/net-folding-inspection-center/` base를 사용합니다.
 - 공개 learner path: 검수 접수 → 면 위치 추적 미션 → 기준면·예상 윗면·접는 순서·방향 입력 → 한 면씩 접기 → 접힌 결과 진단하기까지 완료했습니다.
 - 최종 공개 브라우저 확인에서 console error는 0건입니다. `THREE.Clock` deprecation warning 1건은 `@react-three/fiber` 의존 경고로 기능 실패가 아닙니다.
-- 공개 업데이트 내역 dialog에는 2026-08-28 개선·VoiceOver 범위 제외 기록을 포함한 11개 항목이 표시됩니다.
+- 당시 공개 업데이트 내역 dialog에는 2026-08-28 개선·VoiceOver 범위 제외 기록을 포함한 11개 항목이 표시되었습니다.
 
 ## 교육적 모형 한계
 
@@ -116,7 +116,7 @@ VoiceOver 수동 보조기술 검증도 수행하지 않습니다. 키보드·ax
 Pages-safe favicon을 배포했습니다. VoiceOver + Safari 구현·검증은 사용자 지침에 따라
 범위에서 제외했습니다.
 
-## 2026-08-29 교육 웹앱 리디자인 로컬 검증
+## 2026-08-29 교육 웹앱 리디자인 로컬 검증 (배포 전 기록)
 
 이번 리디자인은 현재 작업 트리에서만 구현·검증했으며 커밋·푸시·배포하지 않았습니다.
 기존 공개 Pages URL은 아래 작업의 결과를 포함한다고 주장하지 않습니다.
@@ -152,7 +152,7 @@ chunk advisory만 있습니다.
 `PLAYWRIGHT_PORT`, `PLAYWRIGHT_BASE_URL`, Vite `--strictPort`를 반영한 뒤 4176에서
 재실행했습니다. 다른 프로젝트 서버는 종료·변경하지 않았습니다.
 
-### 현재 릴리스 상태
+### 2026-08-29 당시 릴리스 상태
 
 - 커밋·푸시·배포: **수행하지 않음**
 - HVC 등록: **수행하지 않음**
@@ -175,9 +175,9 @@ chunk advisory만 있습니다.
   배포 release gate를 열 수 있습니다. 이 작업에서는 커밋·푸시·배포·HVC 등록을
   수행하지 않았습니다.
 
-### 2026-08-30 학습자 표현·진행 경로 보정
+### 2026-08-30 학습자 표현·진행 경로 보정 (배포 전 기록)
 
-이번 보정은 아직 커밋·푸시·배포하지 않은 현재 작업 트리에만 적용했습니다. 미션
+이 보정은 커밋·푸시·배포 전에 현재 작업 트리에 적용했습니다. 미션
 종류별 단계 수를 진행 표시와 연결하고, 수리 미리보기에서 내부 좌표·ID를 제거했으며,
 첫 미션 바로가기·추천 카드와 SVG 장식을 추가했습니다. 판정·저장·오프라인 경계는
 변경하지 않았습니다. 장식용 CSS 그라디언트는 solid light-mode 토큰으로 교체했습니다.
@@ -196,3 +196,22 @@ chunk advisory만 있습니다.
 악성 입력을 거부하는 하위 테스트가 의도적으로 출력한 내용이며 전체 테스트는 통과했습니다.
 브라우저·axe 결과는 보정 전 격리 실행 21/21을 역사적 증거로만 유지하고, 이번 보정 후
 결과로 표시하지 않습니다.
+
+## 2026-08-30 최종 Pages 배포
+
+리디자인 릴리스 브랜치의 네 개 커밋을 PR [#1](https://github.com/WBmaker2/net-folding-inspection-center/pull/1)로
+`main`에 병합했습니다. 최종 병합 커밋은
+`b49aaa3d5db7a144cf040b92fade2b9dcb35313c`이며, GitHub Actions
+[33292372449](https://github.com/WBmaker2/net-folding-inspection-center/actions/runs/33292372449)의
+`build`와 `deploy` job이 모두 성공했습니다.
+
+- 공개 Pages: [https://wbmaker2.github.io/net-folding-inspection-center/](https://wbmaker2.github.io/net-folding-inspection-center/)
+- 공개 HTML: HTTP 200, 제목 `전개도 포장 검수소`, `/net-folding-inspection-center/assets/` 경로 확인
+- 배포된 JS/CSS/favicon: 각각 HTTP 200, `첫 미션부터 시작하기`, `stage-progress-fill`,
+  `--viewer-surface` marker 확인
+- 현재 작업 트리: `output/`만 사용자 산출물로 남아 있으며 커밋하지 않았습니다.
+- HVC 등록: 별도 승인 범위가 아니어서 수행하지 않았습니다.
+
+로컬 Playwright/axe는 관리형 macOS Chromium이 page 생성 전에
+`MachPortRendezvous ... Permission denied`로 종료되어 최신 변경의 자동 브라우저 PASS를
+주장하지 않습니다. 보정 전 격리 실행의 21/21 결과는 역사적 증거로 남겼습니다.
