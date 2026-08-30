@@ -56,16 +56,32 @@ describe('FoldingScreen', () => {
 
     expect(screen.getByText('0 / 5면 접힘')).toBeVisible();
     expect(screen.getByRole('button', { name: '이전 접기' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '처음부터 다시 보기' })).toBeDisabled();
     expect(screen.getByRole('button', { name: '다음 면 접기' })).toBeEnabled();
     await user.click(screen.getByRole('button', { name: '다음 면 접기' }));
     expect(screen.getByText('1 / 5면 접힘')).toBeVisible();
     expect(screen.getByRole('status')).toHaveTextContent('2번 면이 기준면의 위쪽 모서리를 따라 접혔습니다.');
+    expect(screen.getByRole('button', { name: '처음부터 다시 보기' })).toBeEnabled();
 
-    await user.click(screen.getByRole('button', { name: '이전 접기' }));
+    await user.click(screen.getByRole('button', { name: '처음부터 다시 보기' }));
     expect(screen.getByText('0 / 5면 접힘')).toBeVisible();
     expect(screen.getByRole('status')).toHaveTextContent('접기 전 상태로 돌아왔습니다.');
+    expect(screen.getByRole('button', { name: '처음부터 다시 보기' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: '이전 접기' }));
     expect(screen.getByText('0 / 5면 접힘')).toBeVisible();
+  });
+
+  it('keeps the reset action separate from the single pulsing learning action', async () => {
+    const user = userEvent.setup();
+    const onStepChange = vi.fn();
+    renderFolding({ onStepChange, criticalActionId: 'next-fold' });
+
+    await user.click(screen.getByRole('button', { name: '다음 면 접기' }));
+    expect(screen.getByRole('button', { name: '다음 면 접기' })).toHaveClass('gi-pulse');
+    expect(screen.getByRole('button', { name: '처음부터 다시 보기' })).not.toHaveClass('gi-pulse');
+    await user.click(screen.getByRole('button', { name: '처음부터 다시 보기' }));
+    expect(onStepChange).toHaveBeenLastCalledWith(0);
+    expect(document.querySelectorAll('.gi-pulse')).toHaveLength(1);
   });
 
   it('uses one native range for the same step state and completes through 2D only', async () => {

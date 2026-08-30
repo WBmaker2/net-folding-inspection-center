@@ -72,6 +72,8 @@ export function FoldingScreen({
     }
   };
 
+  const resetFold = (): void => setFoldStep(0);
+
   if (!('sequence' in sequenceResult)) {
     return (
       <section
@@ -125,7 +127,7 @@ export function FoldingScreen({
             <strong>{stepIndex} / 5면 접힘</strong>
             <LiveRegion>{liveMessage}</LiveRegion>
           </div>
-          <p className="fold-control-help">슬라이더나 버튼으로 한 면씩 이동하며, 표에서 관계를 확인해 보세요.</p>
+          <p className="fold-control-help">막대를 움직이거나 버튼을 눌러 한 면씩 이동하며, 표에서 관계를 확인해 보세요.</p>
         </div>
 
         <div className="folding-controls" aria-label="접기 단계 조절" aria-describedby="folding-model-boundary">
@@ -143,6 +145,13 @@ export function FoldingScreen({
             onChange={(event) => setFoldStep(Number(event.target.value))}
             aria-describedby="folding-model-boundary"
           />
+          <button
+            type="button"
+            onClick={resetFold}
+            disabled={stepIndex === 0}
+          >
+            처음부터 다시 보기
+          </button>
           <PrimaryAction
             actionId="next-fold"
             criticalActionId={criticalActionId}

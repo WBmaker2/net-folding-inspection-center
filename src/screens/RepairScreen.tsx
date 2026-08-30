@@ -35,8 +35,9 @@ const faceLabel = (net: NetDefinition, faceId: FaceId): string => {
   return `${faceNumber(face)}번 면`;
 };
 
-const reasonText = (evaluation: RepairEvaluation): string => {
-  if (!evaluation.isSingleFaceMove) return '한 면의 위치만 바꾸어야 합니다. 다른 정보는 그대로 두세요.';
+// eslint-disable-next-line react-refresh/only-export-components
+export const describeRepairEvaluation = (evaluation: RepairEvaluation): string => {
+  if (!evaluation.isSingleFaceMove) return '한 면의 위치만 바꾸고, 색과 무늬는 그대로 두세요.';
   if (!evaluation.remainsConnected) return '옮긴 뒤에도 여섯 면이 하나의 전개도로 이어져야 합니다.';
   if (!evaluation.validation.isValid) {
     if (evaluation.validation.reason === 'overlap') return '접었을 때 두 면이 같은 자리에 겹칩니다.';
@@ -206,7 +207,7 @@ function RepairScreenContent({
               : `${evaluation.changedFaceIds.map((faceId) => faceLabel(repairNet, faceId)).join(', ')}의 자리`}</dd></div>
           </dl>
           <p className={evaluation.accepted ? 'repair-valid-reason' : 'repair-invalid-reason'}>
-            {reasonText(evaluation)}
+            {describeRepairEvaluation(evaluation)}
           </p>
           {callbackError && <p className="field-error" role="alert">수리 기록을 저장하지 못했습니다.</p>}
           <PrimaryAction

@@ -118,7 +118,7 @@ export function useLearningController(
     if (result?.ok === false) {
       setPersistenceNotice(result.operation === 'save'
         ? '진행을 저장하지 못했습니다. 저장 선택을 해제했습니다.'
-        : '진행 저장을 해제하지 못했습니다. 저장소 상태를 확인해 주세요.');
+        : '진행 저장을 해제하지 못했습니다. 브라우저 저장 설정을 확인해 주세요.');
       if (result.operation === 'save' && state.storageOptIn) {
         dispatch({ type: 'SET_STORAGE_OPT_IN', enabled: false });
       }

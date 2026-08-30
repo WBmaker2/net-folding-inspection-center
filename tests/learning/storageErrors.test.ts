@@ -77,6 +77,7 @@ describe('storage failure and controller lifecycle boundaries', () => {
     const { result } = renderHook(() => useLearningController({ store }));
     act(() => result.current.dispatch({ type: 'SET_STORAGE_OPT_IN', enabled: true }));
     await waitFor(() => expect(result.current.persistenceNotice).toContain('해제하지 못했습니다'));
+    expect(result.current.persistenceNotice).toBe('진행 저장을 해제하지 못했습니다. 브라우저 저장 설정을 확인해 주세요.');
     clear.mockReturnValue(true);
     act(() => result.current.dispatch({ type: 'SET_STORAGE_OPT_IN', enabled: true }));
     await waitFor(() => expect(result.current.persistenceNotice).toBeNull());
