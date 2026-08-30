@@ -31,7 +31,9 @@ export const PrimaryAction = forwardRef<HTMLButtonElement, PrimaryActionProps>(f
     && ariaDisabled !== 'true'
     && criticalActionId !== undefined
     && actionId === criticalActionId;
-  const classes = [className, shouldPulse ? 'gi-pulse' : undefined].filter(Boolean).join(' ') || undefined;
+  const classes = ['primary-action', className, shouldPulse ? 'gi-pulse' : undefined]
+    .filter(Boolean)
+    .join(' ') || undefined;
   return <button ref={ref} {...buttonProps} type={buttonProps.type ?? 'button'} className={classes} disabled={disabled} />;
 });
 

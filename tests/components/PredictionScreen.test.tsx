@@ -21,6 +21,17 @@ const gridTestFace = (
 });
 
 describe('PredictionScreen', () => {
+  it('shows a compact four-step overview before the prediction controls', () => {
+    render(<PredictionScreen mission={getMissionById('cube-track-01')} onSubmit={vi.fn()} />);
+
+    const overview = screen.getByRole('list', { name: '예측 단계 안내' });
+    expect(overview).toHaveTextContent('기준면');
+    expect(overview).toHaveTextContent('윗면');
+    expect(overview).toHaveTextContent('접는 순서');
+    expect(overview).toHaveTextContent('접는 방향');
+    expect(screen.getByText('키보드: 면에서는 화살표로 이동하고 Enter로 선택해요.')).toBeVisible();
+  });
+
   it('selects a base face with the keyboard and keeps incomplete predictions blocked', async () => {
     const user = userEvent.setup();
     const mission = getMissionById('cube-track-01');

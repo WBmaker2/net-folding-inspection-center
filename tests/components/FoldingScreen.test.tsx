@@ -36,6 +36,14 @@ const predictionFor = (missionId: Parameters<typeof getMissionById>[0]): Predict
 };
 
 describe('FoldingScreen', () => {
+  it('groups fold controls with an explicit learner-facing label', () => {
+    renderFolding();
+
+    const controls = screen.getByRole('group', { name: '접기 조작' });
+    expect(within(controls).getByRole('slider', { name: '접기 단계' })).toBeVisible();
+    expect(within(controls).getByRole('button', { name: '다음 면 접기' })).toHaveClass('primary-action');
+  });
+
   it('moves focus to the folding heading when the stage opens', () => {
     renderFolding();
 

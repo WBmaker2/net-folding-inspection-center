@@ -2,10 +2,19 @@
   width: min(100%, 58rem);
 }
 
-.repair-intro,
-.repair-status {
+.repair-intro {
   color: var(--accent);
   font-weight: 800;
+}
+
+.repair-status {
+  color: var(--accent-strong);
+  margin: 0.8rem 0;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  border-top: 0.3rem solid var(--accent);
+  border-radius: 0.65rem;
+  background: var(--accent-soft);
 }
 
 .repair-panel,
@@ -13,8 +22,9 @@
   margin-block: 1rem;
   padding: 1rem;
   border: 1px solid var(--line);
-  border-radius: 0.8rem;
+  border-radius: 1rem;
   background: var(--surface);
+  box-shadow: var(--shadow-soft);
 }
 
 .repair-panel h2,
@@ -143,8 +153,8 @@
   font-weight: 800;
 }
 
-.repair-valid-reason { color: #1d6b43; }
-.repair-invalid-reason { color: #a3342a; }
+.repair-valid-reason { color: var(--success); }
+.repair-invalid-reason { color: var(--error); }
 
 .repair-confirm-button {
   width: 100%;

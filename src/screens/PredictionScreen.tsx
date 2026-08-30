@@ -27,6 +27,13 @@ const faceIdsExcept = (mission: MissionDefinition, baseFaceId: FaceId | null): r
     .filter((faceId) => faceId !== (baseFaceId ?? mission.baseFaceId))
 );
 
+type PredictionStepState = 'current' | 'upcoming' | 'complete';
+
+const stepState = (isComplete: boolean, isCurrent: boolean): PredictionStepState => {
+  if (isComplete) return 'complete';
+  return isCurrent ? 'current' : 'upcoming';
+};
+
 export function PredictionScreen({ mission, onSubmit, criticalActionId, now = () => new Date().toISOString() }: PredictionScreenProps): React.JSX.Element {
   const headingRef = useFocusHeading<HTMLHeadingElement>();
   const [baseFaceId, setBaseFaceId] = useState<FaceId | null>(null);
@@ -49,6 +56,37 @@ export function PredictionScreen({ mission, onSubmit, criticalActionId, now = ()
     && foldOrder.length === 5
     && new Set(foldOrder).size === 5
     && movingFaceIds.every((faceId) => foldOrder.includes(faceId) && arrowByFace[faceId] !== undefined);
+  const baseSelected = baseFaceId !== null;
+  const topSelected = predictedTopFaceId !== null;
+  const orderComplete = foldOrder.length === 5 && new Set(foldOrder).size === 5;
+  const directionComplete = orderComplete
+    && movingFaceIds.every((faceId) => arrowByFace[faceId] !== undefined);
+  const predictionSteps = [
+    {
+      number: '01',
+      title: '기준면',
+      description: '접을 때 중심이 되는 면',
+      state: stepState(baseSelected, !baseSelected),
+    },
+    {
+      number: '02',
+      title: '윗면',
+      description: '위에 놓일 면 예상',
+      state: stepState(topSelected, baseSelected && !topSelected),
+    },
+    {
+      number: '03',
+      title: '접는 순서',
+      description: '다섯 면의 순서 정하기',
+      state: stepState(orderComplete, topSelected && !orderComplete),
+    },
+    {
+      number: '04',
+      title: '접는 방향',
+      description: '모서리를 따라 방향 고르기',
+      state: stepState(directionComplete, orderComplete && !directionComplete),
+    },
+  ] as const;
 
   const selectBase = (faceId: FaceId): void => {
     setHasInteracted(true);
@@ -113,6 +151,16 @@ export function PredictionScreen({ mission, onSubmit, criticalActionId, now = ()
       <p className="model-note">
         접기는 실제 종이의 두께나 탄성을 재현하지 않는 기하 모형입니다.
       </p>
+      <ol className="prediction-overview" aria-label="예측 단계 안내">
+        {predictionSteps.map((step) => (
+          <li key={step.title} data-step-state={step.state}>
+            <span className="prediction-overview-number" aria-hidden="true">{step.number}</span>
+            <strong>{step.title}</strong>
+            <small>{step.description}</small>
+          </li>
+        ))}
+      </ol>
+      <p className="keyboard-help">키보드: 면에서는 화살표로 이동하고 Enter로 선택해요.</p>
 
       <section className="prediction-step" aria-labelledby="base-title">
         <h2 id="base-title">1. 기준면을 골라 보세요</h2>

@@ -17,8 +17,12 @@ describe('RepairScreen', () => {
     const target = screen.getByRole('button', { name: /빈 칸.*2.*1/ });
     await user.click(target);
     expect(screen.getByRole('heading', { name: '수리 미리보기' })).toBeVisible();
-    expect(screen.getByText('원본 위치').parentElement).toHaveTextContent('(0, 1)');
-    expect(screen.getByText('현재 위치').parentElement).toHaveTextContent('(2, 1)');
+    expect(screen.getByText('옮길 면').parentElement).toHaveTextContent('6번 면');
+    expect(screen.getByText('옮길 곳').parentElement).toHaveTextContent('오른쪽 빈 칸');
+    expect(screen.getByText('바뀐 내용').parentElement).toHaveTextContent('6번 면');
+    expect(screen.queryByText('원본 위치')).toBeNull();
+    expect(screen.queryByText('현재 위치')).toBeNull();
+    expect(screen.queryByText(/F6/)).toBeNull();
     expect(container.querySelector('[draggable="true"]')).toBeNull();
 
     await user.click(screen.getByRole('button', { name: '수리 확인' }));

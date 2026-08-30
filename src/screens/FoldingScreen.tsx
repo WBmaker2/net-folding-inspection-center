@@ -117,45 +117,51 @@ export function FoldingScreen({
         이 가상 접기는 면의 연결 관계를 보여 주는 기하 모형이며 실제 종이의 두께·휘어짐·포장 강도·안전성을 보장하지 않습니다.
       </p>
 
-      <div className="folding-state" aria-label="접기 상태" aria-describedby="folding-model-boundary">
-        <strong>{stepIndex} / 5면 접힘</strong>
-        <LiveRegion>{liveMessage}</LiveRegion>
-      </div>
+      <div className="fold-control-card" role="group" aria-label="접기 조작" aria-describedby="folding-model-boundary">
+        <div className="fold-control-header">
+          <p className="fold-control-kicker">지금 확인할 것</p>
+          <div className="folding-state" aria-label="접기 상태" aria-describedby="folding-model-boundary">
+            <strong>{stepIndex} / 5면 접힘</strong>
+            <LiveRegion>{liveMessage}</LiveRegion>
+          </div>
+          <p className="fold-control-help">슬라이더나 버튼으로 한 면씩 이동하며, 표에서 관계를 확인해 보세요.</p>
+        </div>
 
-      <div className="folding-controls" aria-label="접기 단계 조절" aria-describedby="folding-model-boundary">
-        <button type="button" onClick={() => setFoldStep(stepIndex - 1)} disabled={stepIndex === 0}>
-          이전 접기
-        </button>
-        <label htmlFor="fold-step-range">접기 단계</label>
-        <input
-          id="fold-step-range"
-          type="range"
-          min="0"
-          max="5"
-          step="1"
-          value={stepIndex}
-          onChange={(event) => setFoldStep(Number(event.target.value))}
-          aria-describedby="folding-model-boundary"
-        />
-        <PrimaryAction
-          actionId="next-fold"
-          criticalActionId={criticalActionId}
-          onClick={() => setFoldStep(stepIndex + 1)}
-          disabled={stepIndex === 5}
-        >
-          다음 면 접기
-        </PrimaryAction>
-      </div>
-
-      <div className="folding-options" aria-label="관계 보기 옵션">
-        <label>
+        <div className="folding-controls" aria-label="접기 단계 조절" aria-describedby="folding-model-boundary">
+          <button type="button" onClick={() => setFoldStep(stepIndex - 1)} disabled={stepIndex === 0}>
+            이전 접기
+          </button>
+          <label htmlFor="fold-step-range">접기 단계</label>
           <input
-            type="checkbox"
-            checked={singleFaceMode}
-            onChange={(event) => setSingleFaceMode(event.target.checked)}
+            id="fold-step-range"
+            type="range"
+            min="0"
+            max="5"
+            step="1"
+            value={stepIndex}
+            onChange={(event) => setFoldStep(Number(event.target.value))}
+            aria-describedby="folding-model-boundary"
           />
-          한 면씩 보기
-        </label>
+          <PrimaryAction
+            actionId="next-fold"
+            criticalActionId={criticalActionId}
+            onClick={() => setFoldStep(stepIndex + 1)}
+            disabled={stepIndex === 5}
+          >
+            다음 면 접기
+          </PrimaryAction>
+        </div>
+
+        <div className="folding-options" aria-label="관계 보기 옵션">
+          <label>
+            <input
+              type="checkbox"
+              checked={singleFaceMode}
+              onChange={(event) => setSingleFaceMode(event.target.checked)}
+            />
+            한 면씩 보기
+          </label>
+        </div>
       </div>
 
       <div className="learning-board">

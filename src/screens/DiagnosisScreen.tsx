@@ -17,6 +17,7 @@ import { axisLabel, directionLabel } from '../domain/net/directionLabels';
 import { useFocusHeading } from '../hooks/useFocusHeading';
 import { PrimaryAction } from '../components/common/PrimaryAction';
 import '../styles/net2d.css';
+import '../styles/diagnosis.css';
 
 export interface DiagnosisScreenProps {
   readonly mission: MissionDefinition;

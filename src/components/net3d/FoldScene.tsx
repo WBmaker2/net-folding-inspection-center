@@ -11,15 +11,7 @@ import {
   getSceneFaceEmphasis,
 } from './sceneModel';
 import type { CubeFoldView } from './CubeFoldViewer';
-
-const FACE_COLORS: Readonly<Record<SceneFace['colorToken'], string>> = {
-  blue: '#7bc5ef',
-  yellow: '#f5d45d',
-  green: '#83d39a',
-  coral: '#f28e78',
-  purple: '#b59ae8',
-  teal: '#6fcfc8',
-};
+import { SCENE_COLORS } from './sceneColors';
 
 interface FoldSceneProps {
   readonly faces: readonly SceneFace[];
@@ -94,17 +86,17 @@ export function FoldScene({
             <mesh>
               <planeGeometry args={[1, 1]} />
               <meshBasicMaterial
-                color={FACE_COLORS[face.colorToken]}
+                color={SCENE_COLORS.face[face.colorToken]}
                 transparent
                 opacity={opacity}
                 side={2}
               />
-              <Edges color={face.collision ? '#7f1d1d' : '#27404d'} linewidth={face.collision ? 3 : 1} />
+              <Edges color={face.collision ? SCENE_COLORS.collision : SCENE_COLORS.ink} linewidth={face.collision ? 3 : 1} />
             </mesh>
             <mesh position={[0, 0, 0.04]} rotation={[0, 0, decoration.rotationRadians]}>
               <shapeGeometry args={[makeShape(decoration.points)]} />
               <meshBasicMaterial
-                color="#27404d"
+                color={SCENE_COLORS.ink}
                 opacity={opacity}
                 transparent
                 side={2}
@@ -117,7 +109,7 @@ export function FoldScene({
                 rotation={[0, 0, angle]}
               >
                 <planeGeometry args={[collisionPattern.stripeWidth, 0.82]} />
-                <meshBasicMaterial color="#7f1d1d" opacity={0.85} transparent side={2} />
+                <meshBasicMaterial color={SCENE_COLORS.collision} opacity={0.85} transparent side={2} />
               </mesh>
             ))}
           </group>

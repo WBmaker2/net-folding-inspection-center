@@ -12,9 +12,7 @@ body {
   min-height: 100vh;
   margin: 0;
   color: var(--ink);
-  background:
-    radial-gradient(circle at 10% 0%, rgb(224 244 247 / 60%), transparent 35rem),
-    var(--paper);
+  background: var(--paper);
   line-height: 1.6;
 }
 
@@ -31,13 +29,29 @@ select {
   min-height: 44px;
 }
 
+button,
+select,
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--accent);
+}
+
 button:focus-visible,
-summary:focus-visible {
+summary:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 3px;
 }
 
 p,
-h1 {
+h1,
+h2,
+h3 {
   margin-top: 0;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
 }

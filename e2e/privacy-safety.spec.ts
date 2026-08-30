@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 const MODEL_BOUNDARY = '이 가상 접기는 면의 연결 관계를 보여 주는 기하 모형이며 실제 종이의 두께·휘어짐·포장 강도·안전성을 보장하지 않습니다.';
 const STORAGE_KEY = 'nfic.progress.v1';
-const appAddress = new URL('http://127.0.0.1:4173');
+const appAddress = new URL(process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:4173');
 
 const attachExternalTrafficMonitor = (page: import('@playwright/test').Page): string[] => {
   const external: string[] = [];

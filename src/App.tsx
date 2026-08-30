@@ -12,19 +12,37 @@ import { IntakeScreen } from './screens/IntakeScreen';
 import { PredictionScreen } from './screens/PredictionScreen';
 import { RepairScreen } from './screens/RepairScreen';
 import { getCriticalActionId } from './domain/learning/selectors';
-import type { FaceId, LearningStage } from './domain/net/types';
+import type { FaceId, LearningStage, MissionKind } from './domain/net/types';
 
-function getStageMeta(stage: LearningStage): AppStageMeta {
-  const stageMeta: Readonly<Record<LearningStage, AppStageMeta>> = {
-    intake: { current: 1, total: 6, label: '미션 고르기', canReselect: false },
-    prediction: { current: 2, total: 6, label: '예측', canReselect: true },
-    folding: { current: 3, total: 6, label: '접기', canReselect: true },
-    diagnosis: { current: 4, total: 6, label: '진단', canReselect: true },
-    repair: { current: 5, total: 6, label: '수리', canReselect: true },
-    evidence: { current: 6, total: 6, label: '근거', canReselect: true },
-    complete: { current: 6, total: 6, label: '완료', canReselect: true },
+const STAGE_LABELS: Readonly<Record<LearningStage, string>> = {
+  intake: '미션 고르기',
+  prediction: '예측',
+  folding: '접기',
+  diagnosis: '진단',
+  repair: '수리',
+  evidence: '근거',
+  complete: '완료',
+};
+
+const STAGE_PATHS: Readonly<Record<MissionKind, readonly LearningStage[]>> = {
+  tracking: ['intake', 'prediction', 'folding', 'diagnosis', 'evidence', 'complete'],
+  opposite: ['intake', 'prediction', 'folding', 'evidence', 'complete'],
+  collision: ['intake', 'prediction', 'folding', 'diagnosis', 'repair', 'evidence', 'complete'],
+  repair: ['intake', 'prediction', 'folding', 'diagnosis', 'repair', 'evidence', 'complete'],
+};
+
+/** 미션을 고르기 전에는 가장 긴 경로를 기준으로 안내합니다. */
+const INITIAL_STAGE_PATH = STAGE_PATHS.collision;
+
+function getStageMeta(stage: LearningStage, missionKind?: MissionKind): AppStageMeta {
+  const path = missionKind === undefined ? INITIAL_STAGE_PATH : STAGE_PATHS[missionKind];
+  const stageIndex = path.indexOf(stage);
+  return {
+    current: stageIndex < 0 ? 1 : stageIndex + 1,
+    total: path.length,
+    label: STAGE_LABELS[stage],
+    canReselect: stage !== 'intake',
   };
-  return stageMeta[stage];
 }
 
 export function App(): React.JSX.Element {
@@ -173,7 +191,7 @@ export function App(): React.JSX.Element {
       storageOptIn={state.storageOptIn}
       restoredFromStore={controller.restoredFromStore}
       persistenceNotice={controller.persistenceNotice}
-      stageMeta={getStageMeta(state.stage)}
+      stageMeta={getStageMeta(state.stage, mission?.kind)}
       onReselectMission={state.stage === 'intake' ? undefined : controller.resetMission}
       onStorageOptInChange={(enabled) => controller.dispatch({
         type: 'SET_STORAGE_OPT_IN',

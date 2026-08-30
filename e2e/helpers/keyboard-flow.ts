@@ -25,7 +25,7 @@ async function moveFace(page: Page, from: number, keys: string[], to: number): P
 
 export async function completeCollisionWithKeyboard(page: Page): Promise<void> {
   const missionButton = page.getByRole('button', { name: '겹침 경보 1 미션 선택' });
-  for (let index = 0; index < 5; index += 1) await page.keyboard.press('Tab');
+  await tabUntil(page, missionButton);
   await expect(missionButton).toBeFocused();
   await page.keyboard.press('Space');
   await expect(page.getByRole('heading', { name: '예측판' })).toBeVisible();
