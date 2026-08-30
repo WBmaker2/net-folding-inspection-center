@@ -34,7 +34,7 @@
   margin-top: 0.75rem;
   border: 1px solid var(--line);
   border-radius: 0.6rem;
-  background: #f7fbfc;
+  background: var(--viewer-surface);
   transition: transform 180ms ease-out;
 }
 
